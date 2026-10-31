@@ -17,7 +17,11 @@ from .output_validation import claim_guard, hashtags, length_flags, near_duplica
 from .strategist import compact_profile
 from .text_utils import coverage, short_claim, strip_brand, trim_words
 
-PROMPT_VERSION = "concepts-v1"
+PROMPT_VERSION = "concepts-v2"
+
+# Words that make an ad read like every other ad. If the model uses them in a hook/headline we swap in a sharper variant.
+CLICHE_RE = re.compile(r"\b(game[- ]?chang\w*|unlock\w*|elevat\w*|revolution\w*|next level|say goodbye|"
+                       r"must[- ]have|discover the|introducing|transform your|ultimate|unleash\w*)\b", re.I)
 
 
 # --------------------------------------------------------------------------- context
@@ -228,6 +232,14 @@ Language: {lang.get(x.language, "English")}
 Shared agent memory from Meko (internal learnings; use for direction, not as new product facts):
 {memory_context or "none yet"}
 
+Craft (this is what separates a scroll-past from a stop):
+- The hook is the ad. It must create tension or curiosity in under 8 words: a specific moment ("humid 3pm"), a small truth, or a sharp question the audience says yes to. Never open with the brand name or "Introducing".
+- Be specific, not generic: use a real detail from the approved claims (an ingredient, a texture, a price) in the headline or primary text. "Lightweight, non-sticky texture" beats "great for all skin".
+- Write the way a friend would say it: short sentences, plain Indian-English words, no jargon, no stacked adjectives, no exclamation marks.
+- Each of the 5 concepts must change the ANGLE, not just the wording: problem = a pain the audience already feels; demo = what it looks/feels like in use; storytelling = why it exists; offer = what the real price gets you; testimonial-style = a relatable everyday moment, clearly labelled.
+- primary_text: 2-3 short sentences. Sentence 1 delivers on the hook, sentence 2 gives the proof from a claim, sentence 3 is a low-pressure nudge.
+- BANNED words: game-changer, unlock, elevate, revolutionary, next level, say goodbye, must-have, ultimate, unleash, transform.
+
 Rules:
 - Exactly one concept per concept_type, in this order: {", ".join(CONCEPT_TYPES)}.
 - Each concept a clearly different angle and hook (no two hooks sharing most words).
@@ -284,8 +296,18 @@ def generate(profile: BrandProfile, strategy: CampaignStrategy, product_focus: s
                             lambda: ConceptCopyBatch(concepts=[ConceptCopy(**c.model_dump(include=set(ConceptCopy.model_fields)))
                                                                for c in offline.concepts]),
                             temperature=0.9, timeout=45)
-    concepts = to_batch(res.data).concepts if res.mode == "gemini" else offline.concepts
+    concepts = to_batch(res.data).concepts if res.mode != "offline" else offline.concepts
     warnings = list(res.warnings)
+
+    # Cliché filter: a hook that reads like every other ad gets a sharper variant from the same concept type.
+    for c in concepts:
+        if CLICHE_RE.search(c.hook) or CLICHE_RE.search(c.headline):
+            alts = [h for h in hook_variants(c.concept_type, x) if not CLICHE_RE.search(h) and h != c.hook]
+            if alts:
+                warnings.append(f"Replaced a clichéd hook in the {c.concept_type} concept.")
+                c.hook = alts[0]
+            if CLICHE_RE.search(c.headline):
+                c.headline = trim_words(headline_variants(c.concept_type, x)[0], 60)[0]
 
     # Diversity: replace the later of any near-duplicate pair with an alternative hook.
     for i, j, s in near_duplicates([c.hook for c in concepts]):

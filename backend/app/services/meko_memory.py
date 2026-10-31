@@ -72,7 +72,7 @@ class _Session:
     """One short-lived MCP session: initialize, call tools, done."""
 
     def __init__(self, timeout: float):
-        self.client = httpx.Client(timeout=timeout)
+        self.client = httpx.Client(timeout=httpx.Timeout(timeout, connect=max(timeout, 30.0)))
         self.session_id: str | None = None
         self.ids = itertools.count(1)
 
@@ -152,22 +152,29 @@ def _unwrap(obj: Any) -> Any:
     return obj
 
 
-def _run(fn, timeout: float | None = None):
-    """Open a session, run fn(session), record health. Returns None on any failure."""
+def _run(fn, timeout: float | None = None, attempts: int = 2):
+    """Open a session, run fn(session), record health. Returns None on any failure.
+    A timed-out call is retried once on a fresh session (Meko's TLS handshake is sometimes slow)."""
     if not configured():
         return None
-    s = _Session(timeout or settings.meko_timeout_s)
-    try:
-        s.initialize()
-        out = fn(s)
-        _last.update(ok=True, error="", at=time.time())
-        return out
-    except (MekoError, httpx.HTTPError, ValueError) as exc:
-        _last.update(ok=False, error=str(exc)[:300], at=time.time())
-        log.warning("meko call failed: %s", exc)
-        return None
-    finally:
-        s.close()
+    for attempt in range(attempts):
+        s = _Session(max(timeout or 0, settings.meko_timeout_s))
+        try:
+            s.initialize()
+            out = fn(s)
+            _last.update(ok=True, error="", at=time.time())
+            return out
+        except httpx.TimeoutException as exc:
+            _last.update(ok=False, error=f"Meko timed out ({type(exc).__name__}). Check your connection or raise MEKO_TIMEOUT_S.",
+                         at=time.time())
+            log.warning("meko call timed out (attempt %d/%d): %s", attempt + 1, attempts, exc)
+        except (MekoError, httpx.HTTPError, ValueError, OSError) as exc:
+            _last.update(ok=False, error=str(exc)[:300], at=time.time())
+            log.warning("meko call failed: %s", exc)
+            return None
+        finally:
+            s.close()
+    return None
 
 
 def _find_id(obj: Any, *keys: str) -> str | None:
@@ -198,23 +205,114 @@ def test_connection() -> dict:
         tools = s.list_tools()
         names = sorted(t.get("name", "") for t in tools)
         _last["tools"] = len(names)
-        packs = s.call("datapack_list", {"limit": 5}) if "datapack_list" in names else None
+        packs = None
+        if "datapack_list" in names:
+            cid = s.conversation(AGENTS["brand"], None, "Connection test")
+            packs = s.call("datapack_list", {"limit": 5, "conversation_id": cid})
         return {"ok": True, "configured": True, "tool_count": len(names), "tools": names, "datapacks": packs}
 
     res = _run(go, timeout=15)
     return res or {"ok": False, "configured": True, "message": _last["error"] or "Could not reach Meko."}
 
 
+def _find_named(obj, name: str):
+    """Walk a datapack_list result and return the id of the datapack called `name`."""
+    if isinstance(obj, dict):
+        if obj.get("name") == name:
+            return obj.get("datapack_id") or obj.get("id")
+        for v in obj.values():
+            r = _find_named(v, name)
+            if r:
+                return r
+    elif isinstance(obj, list):
+        for v in obj:
+            r = _find_named(v, name)
+            if r:
+                return r
+    return None
+
+
+def _list_packs(obj, out=None):
+    """Collect (name, id) pairs from a datapack_list result of unknown shape."""
+    out = [] if out is None else out
+    if isinstance(obj, dict):
+        i = obj.get("datapack_id") or obj.get("id") or obj.get("uuid")
+        n = obj.get("name") or obj.get("datapack_name") or obj.get("title")
+        if i and n:
+            out.append((str(n), str(i)))
+        for v in obj.values():
+            _list_packs(v, out)
+    elif isinstance(obj, list):
+        for v in obj:
+            _list_packs(v, out)
+    return out
+
+
+_CACHE = settings.storage_dir.parent / ".meko_datapacks.json"   # survives reset_demo (which wipes storage/)
+
+
+def _cache_get(name: str) -> str | None:
+    try:
+        return json.loads(_CACHE.read_text()).get(name)
+    except (OSError, ValueError):
+        return None
+
+
+def _cache_put(name: str, dp: str | None) -> None:
+    if not dp:
+        return
+    try:
+        data = json.loads(_CACHE.read_text()) if _CACHE.exists() else {}
+    except (OSError, ValueError):
+        data = {}
+    data[name] = dp
+    try:
+        _CACHE.write_text(json.dumps(data, indent=2))
+    except OSError:
+        pass
+
+
+def tag(brand: str, text: str) -> str:
+    """All brands share one datapack (free plans cap how many datapacks you can create), so every
+    memory and every search is tagged with the brand name to keep brands apart."""
+    return f"[Brand: {brand}] {text}" if brand else text
+
+
 def ensure_datapack(brand_name: str, brand_id: int, existing: str | None) -> str | None:
+    """One datapack per brand (clean isolation). Order: MEKO_DATAPACK_ID override, the saved id, an
+    existing AdPilot datapack for this brand (matched by brand name, so datapacks from earlier test
+    runs are reused instead of using up the plan's limit), then a new one."""
+    if settings.meko_datapack_id:
+        return settings.meko_datapack_id
     if existing:
         return existing
 
     def go(s: _Session):
+        name = f"AdPilot · {brand_name}"
+        cached = _cache_get(name)
+        if cached:
+            return cached
         cid = s.conversation(AGENTS["brand"], None, f"Set up datapack · {brand_name}")
-        res = s.call("datapack_create", {"name": f"AdPilot · {brand_name} (#{brand_id})", "conversation_id": cid})
-        return _find_id(res, "datapack_id", "id")
+        packs = _list_packs(s.call("datapack_list", {"limit": 100, "conversation_id": cid}))
+        for n, i in packs:
+            if n == name or (n.lower().startswith("adpilot") and brand_name.lower() in n.lower()):
+                return i
+        last = None
+        for attempt in range(3):   # a name can exist without being listed (other account view): use a new one
+            try_name = name if attempt == 0 else f"{name} {attempt + 1}"
+            try:
+                res = s.call("datapack_create", {"name": try_name, "conversation_id": cid})
+                return _find_id(res, "datapack_id", "id")
+            except MekoError as exc:
+                last = exc
+                if "FREE_TIER" in str(exc) or "already exists" not in str(exc).lower():
+                    break
+        raise MekoError(f"{last} (datapacks seen in list: {len(packs)}). If this is a limit error, delete unused "
+                        f"datapacks in Meko or set MEKO_DATAPACK_ID.")
 
-    return _run(go)
+    dp = _run(go, timeout=45)
+    _cache_put(f"AdPilot · {brand_name}", dp)
+    return dp
 
 
 def sync_brand(datapack_id: str, profile: dict) -> dict | None:
@@ -229,6 +327,8 @@ def sync_brand(datapack_id: str, profile: dict) -> dict | None:
         "Unconfirmed, do not claim: " + "; ".join(profile.get("unknowns_to_confirm", [])),
     ]
 
+    bn = profile.get("brand_name") or ""
+
     def go(s: _Session):
         agent = AGENTS["brand"]
         cid = s.conversation(agent, datapack_id, f"Brand Memory sync · {profile.get('brand_name')}")
@@ -238,22 +338,22 @@ def sync_brand(datapack_id: str, profile: dict) -> dict | None:
                                             "plan": ["extract site", "ground claims", "store facts as memories"]})
         ids = []
         for text in facts:
-            r = s.call("memory_add", {"text": text, "agent_id": agent, "datapack_id": datapack_id,
+            r = s.call("memory_add", {"text": tag(bn, text), "agent_id": agent, "datapack_id": datapack_id,
                                       "conversation_id": cid,
-                                      "metadata": {"source": "adpilot", "kind": "brand_fact"}})
+                                      "metadata": {"source": "adpilot", "kind": "brand_fact", "brand": bn}})
             ids.append(_find_id(r, "memory_id", "id"))
         return {"memories_added": len(facts), "memory_ids": [i for i in ids if i], "conversation_id": cid}
 
-    return _run(go)
+    return _run(go, timeout=60)
 
 
-def context_for_generation(datapack_id: str, query: str, title: str = "Concept generation") -> tuple[str, str | None]:
+def context_for_generation(datapack_id: str, query: str, title: str = "Concept generation", brand: str = "") -> tuple[str, str | None]:
     """Creative agent opens a conversation and pulls relevant memories / learnings.
     Returns (context_text, conversation_id); ("", None) if Meko is unavailable."""
     def go(s: _Session):
         agent = AGENTS["creative"]
         cid = s.conversation(agent, datapack_id, title)
-        res = s.call("context_search", {"query": query, "agent_id": agent, "datapack_id": datapack_id,
+        res = s.call("context_search", {"query": tag(brand, query), "agent_id": agent, "datapack_id": datapack_id,
                                          "conversation_id": cid, "limit": 8})
         return res, cid
 
@@ -275,18 +375,20 @@ def log_generation(datapack_id: str, conversation_id: str | None, campaign_name:
                                             "input": request, "output": output_summary, "plan": plan})
         return {"conversation_id": cid}
 
-    return _run(go)
+    return _run(go, timeout=45)
 
 
-def save_learnings(datapack_id: str, learnings: list[str]) -> dict | None:
+def save_learnings(datapack_id: str, learnings: list[str], kind: str = "learning",
+                   title: str = "Optimization learnings", brand: str = "") -> dict | None:
     """Analyst agent stores what worked, then promotes it so every agent can use it."""
     def go(s: _Session):
         agent = AGENTS["analyst"]
-        cid = s.conversation(agent, datapack_id, "Optimization learnings")
+        cid = s.conversation(agent, datapack_id, title)
         ids = []
         for text in learnings:
-            r = s.call("memory_add", {"text": text, "agent_id": agent, "datapack_id": datapack_id,
-                                      "conversation_id": cid, "metadata": {"source": "adpilot", "kind": "learning"}})
+            r = s.call("memory_add", {"text": tag(brand, text), "agent_id": agent, "datapack_id": datapack_id,
+                                      "conversation_id": cid,
+                                      "metadata": {"source": "adpilot", "kind": kind, "brand": brand}})
             mid = _find_id(r, "memory_id", "id")
             if mid:
                 ids.append(mid)
@@ -299,4 +401,19 @@ def save_learnings(datapack_id: str, learnings: list[str]) -> dict | None:
                 promoted = {"error": str(exc)}
         return {"memories_added": len(learnings), "memory_ids": ids, "promoted": promoted, "conversation_id": cid}
 
-    return _run(go)
+    return _run(go, timeout=60)
+
+
+def read_memory(datapack_id: str, queries: list[str], title: str = "Memory view", brand: str = "") -> dict[str, str]:
+    """What Meko remembers, for display: one context search per question. {} if Meko is unavailable."""
+    def go(s: _Session):
+        agent = AGENTS["creative"]
+        cid = s.conversation(agent, datapack_id, title)
+        out = {}
+        for q in queries:
+            res = s.call("context_search", {"query": tag(brand, q), "agent_id": agent, "datapack_id": datapack_id,
+                                             "conversation_id": cid, "limit": 6})
+            out[q] = (res if isinstance(res, str) else json.dumps(res, ensure_ascii=False))[:2500]
+        return out
+
+    return _run(go, timeout=20) or {}

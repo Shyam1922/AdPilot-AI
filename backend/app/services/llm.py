@@ -4,7 +4,9 @@ generate_json(...) asks the configured provider for JSON, validates it with Pyda
 retries ONCE with the validation error, and finally falls back to a deterministic
 offline generator so the product (and the demo) never blocks on an external API.
 
-Every call returns the generation mode actually used: "gemini" or "offline".
+Providers are tried in order (Gemini, then any OpenAI-compatible provider that has a key: Groq, OpenRouter,
+Mistral, Cerebras, local Ollama, custom). Every call returns the generation mode actually used: the provider name
+or "offline".
 """
 from __future__ import annotations
 
@@ -84,12 +86,9 @@ class LLMResult(Generic[T]):
 
 
 def active_provider() -> str:
-    p = settings.llm_provider.lower()
-    if p == "offline":
-        return "offline"
-    if p in {"auto", "gemini"} and settings.gemini_api_key and time.time() >= _breaker["until"]:
-        return "gemini"
-    return "offline"
+    """Name of the provider that would serve the next call ("offline" if none is ready)."""
+    ready = available_providers()
+    return ready[0] if ready else "offline"
 
 
 def _strip_fences(text: str) -> str:
@@ -176,6 +175,104 @@ def _call_model(model: str, system: str, user: str, temperature: float, _retried
         raise LLMUnavailable(f"Gemini returned no content ({reason}).") from exc
 
 
+# ---------------------------------------------------------------- OpenAI-compatible providers
+# Groq, OpenRouter, Mistral, Cerebras, a local Ollama, or any custom endpoint. Each keeps its own breaker so
+# one provider being down never slows the others.
+_OAI = {
+    "groq": ("https://api.groq.com/openai/v1", lambda: settings.groq_api_key, lambda: settings.groq_model),
+    "openrouter": ("https://openrouter.ai/api/v1", lambda: settings.openrouter_api_key, lambda: settings.openrouter_model),
+    "mistral": ("https://api.mistral.ai/v1", lambda: settings.mistral_api_key, lambda: settings.mistral_model),
+    "cerebras": ("https://api.cerebras.ai/v1", lambda: settings.cerebras_api_key, lambda: settings.cerebras_model),
+}
+_oai_breaker: dict[str, dict] = {}
+
+
+def _oai_conf(name: str) -> tuple[str, str, str] | None:
+    """(base_url, key, model) when this provider is configured, else None."""
+    if name in _OAI:
+        base, key, model = _OAI[name]
+        return (base, key(), model()) if key() and model() else None
+    if name == "ollama":
+        return (settings.ollama_url, "", settings.ollama_model) if settings.ollama_model else None
+    if name == "custom":
+        if settings.custom_llm_url and settings.custom_llm_model:
+            return (settings.custom_llm_url, settings.custom_llm_key, settings.custom_llm_model)
+    return None
+
+
+def _oai_ready(name: str) -> bool:
+    return _oai_conf(name) is not None and time.time() >= _oai_breaker.get(name, {}).get("until", 0.0)
+
+
+def _call_oai(name: str, system: str, user: str, temperature: float, timeout: float | None = None) -> tuple[str, str]:
+    base, key, model = _oai_conf(name)  # type: ignore[misc]
+    timeout = timeout or settings.llm_timeout_s
+    body = {"model": model, "temperature": min(temperature, 1.0), "response_format": {"type": "json_object"},
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user + "\n\nRespond with one JSON object only."}]}
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
+    try:
+        r = httpx.post(f"{base.rstrip('/')}/chat/completions", json=body, headers=headers, timeout=timeout)
+    except httpx.HTTPError as exc:
+        _oai_breaker[name] = {"until": time.time() + _TIMEOUT_BREAK_S, "reason": exc.__class__.__name__}
+        raise LLMUnavailable(f"{name} request failed: {exc.__class__.__name__}") from exc
+    if r.status_code == 400 and "response_format" in r.text.lower():      # model without JSON mode: ask in the prompt
+        body.pop("response_format")
+        try:
+            r = httpx.post(f"{base.rstrip('/')}/chat/completions", json=body, headers=headers, timeout=timeout)
+        except httpx.HTTPError as exc:
+            raise LLMUnavailable(f"{name} request failed: {exc.__class__.__name__}") from exc
+    if r.status_code != 200:
+        secs = {401: 600, 402: 600, 403: 600, 404: 600, 429: 60}.get(r.status_code, _TIMEOUT_BREAK_S)
+        _oai_breaker[name] = {"until": time.time() + secs, "reason": f"HTTP {r.status_code}"}
+        raise LLMUnavailable(f"{name} HTTP {r.status_code}: {r.text[:160]}")
+    try:
+        return r.json()["choices"][0]["message"]["content"], model
+    except (KeyError, IndexError, ValueError, TypeError) as exc:
+        raise LLMUnavailable(f"{name} returned no content") from exc
+
+
+def _provider_order() -> list[str]:
+    p = settings.llm_provider.lower()
+    if p == "offline":
+        return []
+    if p not in {"auto", ""}:
+        return [x for x in p.split(",") if x]
+    return [x.strip().lower() for x in settings.llm_providers.split(",") if x.strip()]
+
+
+def _ready(name: str) -> bool:
+    if name == "gemini":
+        return bool(settings.gemini_api_key) and time.time() >= _breaker["until"]
+    return _oai_ready(name)
+
+
+def available_providers() -> list[str]:
+    return [n for n in _provider_order() if _ready(n)]
+
+
+def providers_status() -> list[dict]:
+    out = []
+    for n in _provider_order():
+        if n == "gemini":
+            st = gemini_status()
+            out.append({"name": n, "configured": st["configured"], "model": st["model"], "ready": _ready(n),
+                        "paused_for_s": st["paused_for_s"], "reason": st["reason"]})
+            continue
+        c = _oai_conf(n)
+        br = _oai_breaker.get(n, {})
+        left = max(0, int(br.get("until", 0) - time.time()))
+        out.append({"name": n, "configured": c is not None, "model": c[2] if c else "", "ready": _ready(n),
+                    "paused_for_s": left, "reason": br.get("reason", "") if left else ""})
+    return out
+
+
+def _call_provider(name: str, system: str, user: str, temperature: float, timeout: float | None) -> tuple[str, str]:
+    if name == "gemini":
+        return _call_gemini(system, user, temperature, timeout=timeout), _model["name"]
+    return _call_oai(name, system, user, temperature, timeout=timeout)
+
+
 def schema_hint(schema: type[BaseModel]) -> str:
     """Compact JSON schema so the model knows the exact shape."""
     return json.dumps(schema.model_json_schema(), separators=(",", ":"))
@@ -193,29 +290,35 @@ def generate_json(
 ) -> LLMResult[T]:
     """Ask the LLM for `schema`; retry once on invalid output; fall back to `fallback()`."""
     warnings: list[str] = []
-    if active_provider() == "gemini":
-        prompt = f"{user_prompt}\n\nReturn JSON matching this JSON Schema exactly:\n{schema_hint(schema)}"
+    tried: list[str] = []
+    prompt = f"{user_prompt}\n\nReturn JSON matching this JSON Schema exactly:\n{schema_hint(schema)}"
+    for name in available_providers():
         last_error = ""
         for attempt in (1, 2):
             t0 = time.perf_counter()
             try:
                 p = prompt if attempt == 1 else (
                     f"{prompt}\n\nYour previous answer was invalid: {last_error[:800]}\nFix it and return valid JSON only.")
-                raw = _call_gemini(system, p, temperature, timeout=timeout)
+                raw, model = _call_provider(name, system, p, temperature, timeout)
                 obj = schema.model_validate(json.loads(_strip_fences(raw)))
                 if postprocess:
                     obj = postprocess(obj)
                 ms = int((time.perf_counter() - t0) * 1000)
-                log.info("llm task=%s mode=gemini model=%s attempt=%d ms=%d", task, _model["name"], attempt, ms)
-                return LLMResult(obj, "gemini", warnings, ms, _model["name"])
+                log.info("llm task=%s mode=%s model=%s attempt=%d ms=%d", task, name, model, attempt, ms)
+                if tried:
+                    warnings.append(f"{', '.join(tried)} unavailable for '{task}'; answered by {name}.")
+                return LLMResult(obj, name, warnings, ms, model)
             except (json.JSONDecodeError, ValidationError, ValueError) as exc:
                 last_error = str(exc)
-                log.warning("llm task=%s invalid output attempt=%d: %s", task, attempt, last_error[:200])
+                log.warning("llm task=%s provider=%s invalid output attempt=%d: %s", task, name, attempt, last_error[:200])
             except LLMUnavailable as exc:
                 last_error = str(exc)
-                log.warning("llm task=%s unavailable: %s", task, exc)
+                log.warning("llm task=%s provider=%s unavailable: %s", task, name, exc)
                 break
-        warnings.append(f"AI provider unavailable or returned invalid output for '{task}'; used the offline generator.")
+        tried.append(name)          # try the next provider in the chain
+    if tried:
+        warnings.append(f"AI providers ({', '.join(tried)}) unavailable or returned invalid output for '{task}'; "
+                        "used the offline generator.")
     t0 = time.perf_counter()
     obj = fallback()
     if postprocess:

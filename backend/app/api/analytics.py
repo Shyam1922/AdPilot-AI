@@ -160,7 +160,8 @@ def iterate(campaign_id: int, background: BackgroundTasks, req: IterateRequest =
             changed_variables=spec["changes"], rationale=spec["rationale"], is_exploration=spec["is_exploration"],
             status="generated", generation_mode=d.get("generation_mode", "offline"),
             prompt_version=ad_generator.PROMPT_VERSION))
-    it.generation_mode = "rules+" + ("gemini" if "gemini" in modes else "offline")
+    ai_modes = sorted(m for m in modes if m != "offline")
+    it.generation_mode = "rules+" + (ai_modes[0] if ai_modes else "offline")
     session.add(it)
 
     # Brand Memory learns (locally, and in Meko via the analyst agent).

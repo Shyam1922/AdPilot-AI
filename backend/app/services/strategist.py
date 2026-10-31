@@ -38,6 +38,87 @@ CHANNEL_ROLES = {
 }
 
 
+_CHANNEL_ALIASES = {
+    "instagram": "instagram", "ig": "instagram", "insta": "instagram", "reels": "instagram",
+    "meta": "meta_ads", "meta ads": "meta_ads", "meta_ads": "meta_ads", "facebook": "meta_ads", "facebook ads": "meta_ads",
+    "google": "google_ads", "google ads": "google_ads", "google_ads": "google_ads", "search": "google_ads",
+    "youtube": "youtube", "youtube shorts": "youtube", "shorts": "youtube",
+    "amazon": "amazon_ads", "amazon ads": "amazon_ads", "amazon_ads": "amazon_ads",
+    "email": "email", "newsletter": "email",
+}
+
+
+def _channel_key(raw) -> str:
+    t = str(raw or "").strip().lower().replace("-", " ")
+    if t in _CHANNEL_ALIASES:
+        return _CHANNEL_ALIASES[t]
+    for alias, key in _CHANNEL_ALIASES.items():
+        if alias in t:
+            return key
+    return t.replace(" ", "_")
+
+
+def _as_list(v) -> list[str]:
+    if isinstance(v, str):
+        return [x.strip() for x in v.replace(";", ",").split(",") if x.strip()]
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if str(x).strip()]
+    return []
+
+
+def normalize_channel_plan(items, channels: list[str]) -> list[dict]:
+    """Make channel_plan always [{channel, role, formats}] with known channel keys, whatever the model returned."""
+    out: dict[str, dict] = {}
+    for it in items or []:
+        if isinstance(it, str):
+            it = {"channel": it}
+        if not isinstance(it, dict):
+            continue
+        raw = next((it[k] for k in ("channel", "platform", "name", "channel_name", "id", "title") if it.get(k)), "")
+        key = _channel_key(raw)
+        if not key:
+            continue
+        role_default, fmt_default = CHANNEL_ROLES.get(key, ("Supporting channel", ["Native formats"]))
+        role = next((str(it[k]) for k in ("role", "purpose", "objective", "description", "goal") if it.get(k)), role_default)
+        formats = _as_list(next((it[k] for k in ("formats", "format", "creative_formats", "ad_formats") if it.get(k)), [])) or fmt_default
+        out.setdefault(key, {"channel": key, "role": role, "formats": formats})
+    for ch in channels or []:   # every requested channel appears in the plan
+        key = _channel_key(ch)
+        if key not in out:
+            role, formats = CHANNEL_ROLES.get(key, ("Supporting channel", ["Native formats"]))
+            out[key] = {"channel": key, "role": role, "formats": formats}
+    return list(out.values())
+
+
+def normalize_strategy(d: dict, channels: list[str]) -> dict:
+    """Repair a stored/generated strategy so the UI contract always holds (no missing keys, right types)."""
+    d = dict(d or {})
+    d["channel_plan"] = normalize_channel_plan(d.get("channel_plan"), channels)
+    fallback_ch = d["channel_plan"][0]["channel"] if d["channel_plan"] else "instagram"
+    cal = []
+    for i, it in enumerate(d.get("content_calendar") or []):
+        if not isinstance(it, dict):
+            continue
+        try:
+            day = int(it.get("day") or i + 1)
+        except (TypeError, ValueError):
+            day = i + 1
+        cal.append({"day": day, "channel": _channel_key(it.get("channel") or it.get("platform")) or fallback_ch,
+                    "content": str(it.get("content") or it.get("idea") or it.get("title") or ""),
+                    "concept_type": str(it.get("concept_type") or it.get("type") or "")})
+    d["content_calendar"] = cal
+    segs = []
+    for sg in d.get("segments") or []:
+        if isinstance(sg, dict):
+            segs.append({"name": str(sg.get("name") or sg.get("segment") or "Audience"),
+                         "pain_points": _as_list(sg.get("pain_points") or sg.get("pains") or []),
+                         "message": str(sg.get("message") or sg.get("key_message") or "")})
+    d["segments"] = segs
+    for k in ("campaign_themes", "creative_angles", "ctas", "assumptions", "not_claimed"):
+        d[k] = _as_list(d.get(k))
+    return d
+
+
 def offline_strategy(profile: BrandProfile, objective: str, channels: list[str], product_focus: str,
                      audience_note: str) -> CampaignStrategy:
     brand = profile.brand_name
@@ -148,6 +229,7 @@ def generate(profile: BrandProfile, objective: str, channels: list[str], product
 
     def fix(s: CampaignStrategy) -> CampaignStrategy:
         s.objective = objective
+        s.channel_plan = normalize_channel_plan(s.channel_plan, channels)
         return s
 
     return llm.generate_json("campaign_strategy",

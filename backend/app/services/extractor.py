@@ -40,6 +40,7 @@ class ExtractionResult:
     description: str = ""
     site_name: str = ""
     og_image: str = ""
+    page_images: list[str] = field(default_factory=list)   # ranked candidate photos found in the page body
     logo: str = ""
     theme_color: str = ""
     products: list[dict] = field(default_factory=list)
@@ -181,6 +182,54 @@ def _product_from_jsonld(item: dict, base: str) -> dict | None:
     }
 
 
+
+SKIP_IMG_RE = re.compile(r"(logo|icon|sprite|avatar|badge|payment|flag|pixel|tracking|spinner|loader|placeholder|"
+                         r"arrow|chevron|star|rating|social|facebook|instagram|twitter|whatsapp|banner-ad|\.svg|\.gif|data:)", re.I)
+GOOD_IMG_RE = re.compile(r"(product|hero|pack|bottle|shot|collection|featured|main|gallery|item|catalog)", re.I)
+
+
+def _best_from_srcset(srcset: str) -> str:
+    best, best_w = "", -1
+    for part in (srcset or "").split(","):
+        bits = part.strip().split()
+        if not bits:
+            continue
+        try:
+            w = int(bits[1].rstrip("wx")) if len(bits) > 1 else 0
+        except ValueError:
+            w = 0
+        if w >= best_w:
+            best, best_w = bits[0], w
+    return best
+
+
+def collect_page_images(body, base: str, limit: int = 12) -> list[str]:
+    """Candidate product/hero photos from <img>, <picture> and lazy-load attributes, best-looking first."""
+    scored: list[tuple[int, int, str]] = []
+    seen: set[str] = set()
+    for order, img in enumerate(body.find_all("img")):
+        raw = (img.get("data-src") or img.get("data-original") or img.get("data-lazy-src")
+               or _best_from_srcset(img.get("srcset") or img.get("data-srcset") or "") or img.get("src") or "")
+        if not raw or raw.startswith("data:"):
+            continue
+        url = urljoin(base, raw.split(" ")[0])
+        if not url.startswith(("http://", "https://")) or url in seen:
+            continue
+        hint = " ".join([url, " ".join(img.get("class") or []), img.get("alt") or "", img.get("id") or ""])
+        if SKIP_IMG_RE.search(hint):
+            continue
+        try:
+            w = int(str(img.get("width", "0")).rstrip("px") or 0)
+        except ValueError:
+            w = 0
+        if 0 < w < 120:
+            continue
+        seen.add(url)
+        score = (3 if GOOD_IMG_RE.search(hint) else 0) + (2 if w >= 400 else 0) + (1 if img.get("alt") else 0)
+        scored.append((-score, order, url))
+    return [u for _, _, u in sorted(scored)][:limit]
+
+
 def parse_html(html: str, url: str) -> ExtractionResult:
     res = ExtractionResult(url=url, final_url=url)
     soup = BeautifulSoup(html, "html.parser")
@@ -224,6 +273,7 @@ def parse_html(html: str, url: str) -> ExtractionResult:
     res.removed_hidden_elements = len(hidden)
 
     body = soup.find("main") or soup.body or soup
+    res.page_images = collect_page_images(soup.body or soup, url)
     for nav in body.find_all(["nav", "footer", "header"]):
         if nav.find("h1") is None:
             nav.decompose()

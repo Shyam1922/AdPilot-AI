@@ -28,6 +28,23 @@ class Settings:
     gemini_fallback_models: str = os.getenv(
         "GEMINI_FALLBACK_MODELS", "gemini-3.5-flash-lite,gemini-flash-latest")
 
+    # Extra providers tried (in LLM_PROVIDERS order) when Gemini is down, rate-limited or out of quota.
+    # All use the OpenAI-compatible /chat/completions API, so any of them works with just a key + model.
+    llm_providers: str = os.getenv("LLM_PROVIDERS", "gemini,groq,openrouter,mistral,cerebras,ollama,custom")
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
+    groq_model: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    openrouter_api_key: str = os.getenv("OPENROUTER_API_KEY", "")
+    openrouter_model: str = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
+    mistral_api_key: str = os.getenv("MISTRAL_API_KEY", "")
+    mistral_model: str = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
+    cerebras_api_key: str = os.getenv("CEREBRAS_API_KEY", "")
+    cerebras_model: str = os.getenv("CEREBRAS_MODEL", "llama-3.3-70b")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "")            # local, no key: e.g. llama3.1:8b
+    ollama_url: str = os.getenv("OLLAMA_URL", "http://localhost:11434/v1")
+    custom_llm_url: str = os.getenv("CUSTOM_LLM_URL", "")        # any OpenAI-compatible endpoint
+    custom_llm_key: str = os.getenv("CUSTOM_LLM_KEY", "")
+    custom_llm_model: str = os.getenv("CUSTOM_LLM_MODEL", "")
+
     database_url: str = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'adpilot.db'}")
     storage_dir: Path = Path(os.getenv("STORAGE_DIR", str(BACKEND_DIR / "storage")))
     sample_data_dir: Path = REPO_DIR / "sample_data"
@@ -57,7 +74,8 @@ class Settings:
     meko_url: str = os.getenv("MEKO_URL", "https://mcp.mekodata.ai/mcp")
     meko_auth_header: str = os.getenv("MEKO_AUTH_HEADER", "Authorization")
     meko_auth_scheme: str = os.getenv("MEKO_AUTH_SCHEME", "Bearer")
-    meko_timeout_s: float = float(os.getenv("MEKO_TIMEOUT_S", "8"))
+    meko_datapack_id: str = os.getenv("MEKO_DATAPACK_ID", "")        # optional: force an existing datapack
+    meko_timeout_s: float = float(os.getenv("MEKO_TIMEOUT_S", "20"))
 
     seed_demo: bool = _bool("SEED_DEMO", True)
 

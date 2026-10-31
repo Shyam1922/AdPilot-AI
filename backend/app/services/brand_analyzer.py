@@ -312,6 +312,18 @@ Rules:
 
 
 # --------------------------------------------------------------------------- main entry
+def _big_enough(path: Path, strict: bool) -> bool:
+    """Skip thumbnails and banners. Photos tied to a product are kept even when small; page photos must be >= 300px."""
+    try:
+        from PIL import Image
+        w, h = Image.open(path).size
+    except Exception:  # noqa: BLE001
+        return False
+    if strict:
+        return min(w, h) >= 300 and max(w, h) / max(1, min(w, h)) <= 3.5
+    return min(w, h) >= 120
+
+
 def analyze(ext: ExtractionResult | None, manual: ManualBrandInput, brand_dir: Path) -> BrandAnalysis:
     sources = build_sources(ext, manual)
     warnings = list(ext.warnings) if ext else []
@@ -336,7 +348,7 @@ def analyze(ext: ExtractionResult | None, manual: ManualBrandInput, brand_dir: P
     profile.source_urls = [ext.final_url or ext.url] if ext else []
     profile = ground_claims(profile, sources, manual.claims_to_avoid)
 
-    if result.mode == "gemini":
+    if result.mode != "offline":
         # The product name must be a product we actually found (or the one the user typed).
         names = [p.name for p in profile.products]
         if manual.product_name:
@@ -361,12 +373,22 @@ def analyze(ext: ExtractionResult | None, manual: ManualBrandInput, brand_dir: P
     urls = [p.image_url for p in profile.products if p.image_url]
     if ext and ext.og_image and ext.og_image not in urls:
         urls.append(ext.og_image)
-    for i, u in enumerate(urls[:6]):
+    for u in (ext.page_images if ext else []):   # photos found in the page body (hero, gallery, lazy-loaded)
+        if u not in urls:
+            urls.append(u)
+    n_products = len([p for p in profile.products if p.image_url])
+    for i, u in enumerate(urls[:10]):
         p = download_image(u, brand_dir, f"product_{i+1}")
-        if p:
+        if p and _big_enough(p, strict=i >= n_products):
             image_paths.append(p)
+        elif p:
+            p.unlink(missing_ok=True)
+        if len(image_paths) >= 6:
+            break
     if urls and not image_paths:
-        warnings.append("Could not download product images; upload them manually for videos.")
+        warnings.append("Could not find usable product photos on the site. Upload a product photo for better videos.")
+    elif not urls:
+        warnings.append("No product photos found on the site. Upload a product photo for better videos.")
 
     color_imgs = ([Path(logo_path)] if logo_path else []) + image_paths
     profile.visual_identity = visual_identity(ext, color_imgs, profile.brand_tone)

@@ -15,7 +15,8 @@ def _slug(s: str) -> str:
     return "".join(ch if ch.isalnum() else "-" for ch in s.lower()).strip("-")[:40] or "campaign"
 
 
-def build_zip(brand: Brand, camp: Campaign, concepts: list[Concept], videos: dict[int, Asset]) -> tuple[bytes, str]:
+def build_zip(brand: Brand, camp: Campaign, concepts: list[Concept], videos: dict[int, Asset],
+              posts: list | None = None) -> tuple[bytes, str]:
     buf = io.BytesIO()
     approved = [c for c in concepts if c.status == "approved"]
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
@@ -55,17 +56,28 @@ def build_zip(brand: Brand, camp: Campaign, concepts: list[Concept], videos: dic
             if vid and vid.status == "ready" and vid.path and Path(vid.path).exists():
                 z.write(vid.path, f"videos/concept_{c.id}.mp4")
 
+        approved_posts = [p for p in (posts or []) if p.status == "approved"]
+        if approved_posts:
+            z.writestr("social_posts.json", json.dumps([{
+                "id": p.id, "concept_id": p.concept_id, "platform": p.platform, "text": p.text,
+                "thread": p.thread, "visual_idea": p.visual_idea, "risk_flags": p.risk_flags,
+                "generation_mode": p.generation_mode} for p in approved_posts], indent=2, ensure_ascii=False))
+            for p in approved_posts:
+                body = p.text + ("\n\n--- thread ---\n" + "\n\n".join(p.thread) if p.thread else "")
+                z.writestr(f"social_posts/{p.platform}_concept_{p.concept_id}_post_{p.id}.txt", body)
+
         modes = sorted({c.generation_mode for c in approved})
         z.writestr("README.txt", "\n".join([
             f"AdPilot AI export · {camp.name} · {brand.name}",
             "",
-            f"{len(approved)} approved concept(s). Copy written by: {', '.join(modes) or 'n/a'} (gemini = Gemini API,",
+            f"{len(approved)} approved concept(s). Copy written by: {', '.join(modes) or 'n/a'} (a provider name such as gemini or groq = an AI model,",
             "offline = AdPilot's rule-based templates). Every product claim was checked against the brand's sources;",
             "see risk_flags in concepts.json for anything to review before launch.",
             "",
             "Videos were rendered by AdPilot's template pipeline (Pillow + FFmpeg) using the brand's real product image.",
             "Concepts marked '(Dramatization)' are not real customer reviews.",
             "",
+            f"{len(approved_posts)} approved social post(s) are in social_posts/ (copy-paste drafts for LinkedIn, Instagram and X).",
             "Nothing in this export has been published or spent. Upload to your ad platform after review.",
         ]))
     return buf.getvalue(), f"adpilot-{_slug(brand.name)}-{_slug(camp.name)}.zip"

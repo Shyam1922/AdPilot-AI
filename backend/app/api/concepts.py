@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -39,7 +39,7 @@ def generate_concepts(campaign_id: int, background: BackgroundTasks, req: Genera
     dp = datapack_for(brand)
     memory_context, meko_cid = meko_memory.context_for_generation(
         dp, f"{camp.objective} campaign for {camp.product_focus}: what worked, audience, tone, claims",
-        title=f"Concepts · {camp.name}") if dp else ("", None)
+        title=f"Concepts · {camp.name}", brand=brand.name) if dp else ("", None)
     items, mode, warnings = ad_generator.generate(profile, strategy, camp.product_focus, guardrail_list(brand),
                                                   brand.sources, req.language, memory_context=memory_context)
     created = []
@@ -124,6 +124,9 @@ def get_concept(concept_id: int, session: Session = Depends(get_session)) -> dic
 
 class VideoRequest(BaseModel):
     format: Literal["9:16", "1:1", "4:5"] = "9:16"
+    # "motion" = our own animated template (default, always available).
+    # "ai_clip" = play the AI-generated clip attached to this concept in the product + benefit scenes.
+    mode: Literal["motion", "ai_clip"] = "motion"
 
 
 @router.post("/concepts/{concept_id}/video", status_code=202)
@@ -138,14 +141,121 @@ def create_video(concept_id: int, background: BackgroundTasks, req: VideoRequest
 
     c = get_or_404(session, Concept, concept_id)
     camp = get_or_404(session, Campaign, c.campaign_id)
-    if not shutil.which("ffmpeg"):
+    from ..services.video_jobs import latest_ai_clip
+    from ..services.video_service import ffmpeg_path
+    if not ffmpeg_path():
         raise HTTPException(503, "FFmpeg is not installed on the server, so videos can't be rendered.")
+    if req.mode == "ai_clip" and latest_ai_clip(session, c.id) is None:
+        raise HTTPException(409, "No AI clip is attached to this concept yet. Upload one (POST /concepts/{id}/ai-clip) "
+                                 "or render with mode 'motion'.")
     asset = Asset(campaign_id=camp.id, concept_id=c.id, brand_id=camp.brand_id, kind="video", fmt=req.format,
-                  status="queued", generation_mode="template", meta={"progress": 0.0})
+                  status="queued", generation_mode="template", meta={"progress": 0.0, "mode": req.mode})
     session.add(asset)
     session.commit()
     session.refresh(asset)
-    audit(session, "concept", c.id, "video_requested", asset_id=asset.id, format=req.format)
+    audit(session, "concept", c.id, "video_requested", asset_id=asset.id, format=req.format, mode=req.mode)
     session.commit()
     background.add_task(render_job, asset.id)
     return asset_out(asset)
+
+
+# --------------------------------------------------------------------------- optional AI clip (switchable)
+AI_CLIP_EXT = {".mp4", ".mov", ".webm", ".m4v"}
+AI_CLIP_MAX_BYTES = 80 * 1024 * 1024
+AI_CLIP_MAX_SECONDS = 30
+
+
+@router.get("/concepts/{concept_id}/video-options")
+def video_options(concept_id: int, session: Session = Depends(get_session)) -> dict:
+    """What the UI can offer for this concept: the standard motion ad, and the Pro AI-clip ad."""
+    from ..services.video_jobs import latest_ai_clip
+    if session.get(Concept, concept_id) is None:
+        raise HTTPException(404, "Concept not found")
+    clip = latest_ai_clip(session, concept_id)
+    return {"modes": [
+        {"mode": "motion", "label": "Standard", "tier": "standard", "available": True,
+         "description": "Animated product ad built from your Brand Memory, product photos and verified claims."},
+        {"mode": "ai_clip", "label": "Pro - AI video", "tier": "pro", "available": clip is not None,
+         "has_clip": clip is not None,
+         "description": "Same verified copy and price/CTA overlays, on top of a cinematic AI-generated clip of the product.",
+         "needs": None if clip else "Upload an AI clip (POST /api/concepts/{id}/ai-clip)"}]}
+
+
+@router.get("/concepts/{concept_id}/ai-prompt")
+def ai_clip_prompt(concept_id: int, session: Session = Depends(get_session)) -> dict:
+    """A ready-to-paste prompt for an AI video tool (Veo in Flow, Higgsfield, Runway, ...). Uses the concept's own
+    visual brief, and tells the tool to keep the product exact and to render no text, so our verified copy stays on top."""
+    c = get_or_404(session, Concept, concept_id)
+    camp = get_or_404(session, Campaign, c.campaign_id)
+    brand, profile, _ = brand_context(session, camp)
+    vb = c.visual_brief or {}
+    product = camp.product_focus or profile.product_name
+    prompt = (
+        f"Vertical 9:16 video, 8 seconds, cinematic product ad for {brand.name}'s {product}. "
+        f"Scene: {vb.get('scene', 'product hero shot')}. "
+        f"Product: use the attached reference photo exactly; keep the shape, colour, label and logo unchanged and "
+        f"never invent a different product. Composition: {vb.get('composition', 'product in the middle third')}. "
+        f"Style: {vb.get('style') or 'clean, premium'}; brand colours; soft natural lighting. "
+        f"Camera: slow push-in with gentle parallax. Leave the top 25% and bottom 30% of the frame visually calm. "
+        f"No on-screen text, no captions, no logos other than the product's own, no people speaking, no music with lyrics."
+    )
+    return {"concept_id": c.id, "prompt": prompt, "duration_s": 8, "aspect_ratio": "9:16",
+            "reference_image": "Upload the brand's real product photo as the starting image.",
+            "tips": ["Generate 2-3 variations and keep the one where the product label is unchanged.",
+                     "Mute or ignore the clip's audio; the app drops it and uses your approved text only.",
+                     "Free tools may add a watermark and limit commercial use: fine for a demo, check before real campaigns."]}
+
+
+@router.post("/concepts/{concept_id}/ai-clip")
+async def attach_ai_clip(concept_id: int, file: UploadFile = File(...), session: Session = Depends(get_session)) -> dict:
+    """Attach an AI-generated clip (made in any tool) to this concept. Render with mode 'ai_clip' to use it."""
+    import time
+    from pathlib import Path
+
+    from ..config import settings
+    from ..models import Asset
+    from ..serializers import asset_out
+    from ..services.video_service import probe_clip
+
+    c = get_or_404(session, Concept, concept_id)
+    camp = get_or_404(session, Campaign, c.campaign_id)
+    ext = Path(file.filename or "clip.mp4").suffix.lower()
+    if ext not in AI_CLIP_EXT:
+        raise HTTPException(422, f"Use a video file ({', '.join(sorted(AI_CLIP_EXT))}).")
+    data = await file.read()
+    if len(data) > AI_CLIP_MAX_BYTES:
+        raise HTTPException(413, f"Clip is too large (max {AI_CLIP_MAX_BYTES // (1024 * 1024)} MB).")
+    d = settings.storage_dir / f"brand_{camp.brand_id}" / "ai_clips"
+    d.mkdir(parents=True, exist_ok=True)
+    path = d / f"concept_{c.id}_{int(time.time())}{ext}"
+    path.write_bytes(data)
+    dur = probe_clip(path)
+    if dur is None or dur > AI_CLIP_MAX_SECONDS:
+        path.unlink(missing_ok=True)
+        raise HTTPException(422, "That file isn't a readable video, or it is longer than "
+                                 f"{AI_CLIP_MAX_SECONDS} seconds.")
+    asset = Asset(campaign_id=camp.id, concept_id=c.id, brand_id=camp.brand_id, kind="ai_clip", fmt="9:16",
+                  path=str(path), status="ready", generation_mode="external_ai",
+                  meta={"duration_s": round(dur, 2), "original_name": file.filename, "source": "user_attached"})
+    session.add(asset)
+    audit(session, "concept", c.id, "ai_clip_attached", filename=file.filename, duration_s=round(dur, 2))
+    session.commit()
+    session.refresh(asset)
+    return asset_out(asset)
+
+
+@router.delete("/concepts/{concept_id}/ai-clip", status_code=204)
+def remove_ai_clips(concept_id: int, session: Session = Depends(get_session)) -> None:
+    """Detach the AI clip(s) from this concept. Already-rendered videos are kept."""
+    from pathlib import Path
+
+    from sqlmodel import select
+
+    from ..models import Asset
+    get_or_404(session, Concept, concept_id)
+    for a in session.exec(select(Asset).where(Asset.concept_id == concept_id, Asset.kind == "ai_clip")).all():
+        if a.path:
+            Path(a.path).unlink(missing_ok=True)
+        session.delete(a)
+    audit(session, "concept", concept_id, "ai_clip_removed")
+    session.commit()

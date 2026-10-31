@@ -109,7 +109,9 @@ def export_campaign(campaign_id: int, session: Session = Depends(get_session)):
     concepts = session.exec(select(Concept).where(Concept.campaign_id == camp.id).order_by(Concept.id)).all()
     if not any(c.status == "approved" for c in concepts):
         raise HTTPException(409, "Approve at least one concept before exporting.")
-    data, filename = build_zip(brand, camp, concepts, latest_videos(session, camp.id))
+    from ..models import SocialPost
+    posts = session.exec(select(SocialPost).where(SocialPost.campaign_id == camp.id)).all()
+    data, filename = build_zip(brand, camp, concepts, latest_videos(session, camp.id), posts)
     audit(session, "campaign", camp.id, "exported", approved=sum(c.status == "approved" for c in concepts),
           bytes=len(data))
     session.commit()

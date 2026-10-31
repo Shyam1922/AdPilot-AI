@@ -72,13 +72,18 @@ def latest_videos(session: Session, campaign_id: int) -> dict[int, Asset]:
     return {a.concept_id: a for a in rows if a.concept_id is not None}
 
 
+def _clean_strategy(c: Campaign) -> dict[str, Any]:
+    from .services.strategist import normalize_strategy
+    return normalize_strategy(c.strategy, c.channels) if c.strategy else c.strategy
+
+
 def campaign_out(session: Session, c: Campaign) -> dict[str, Any]:
     concepts = session.exec(select(Concept).where(Concept.campaign_id == c.id)).all()
     vids = latest_videos(session, c.id)
     return {
         "id": c.id, "brand_id": c.brand_id, "name": c.name, "objective": c.objective, "channels": c.channels,
         "product_focus": c.product_focus, "audience_note": c.audience_note, "budget_note": c.budget_note,
-        "status": c.status, "strategy": c.strategy, "generation_mode": c.generation_mode,
+        "status": c.status, "strategy": _clean_strategy(c), "generation_mode": c.generation_mode,
         "counts": {"concepts": len(concepts), "approved": sum(x.status == "approved" for x in concepts),
                    "videos_ready": sum(v.status == "ready" for v in vids.values())},
         "created_at": _ts(c.created_at), "updated_at": _ts(c.updated_at),
@@ -95,3 +100,27 @@ def iteration_out(session: Session, it: Iteration) -> dict[str, Any]:
         "variants": [concept_out(v, vids.get(v.id)) for v in variants],
         "generation_mode": it.generation_mode, "created_at": _ts(it.created_at),
     }
+
+
+def post_out(p) -> dict[str, Any]:
+    limit = {"linkedin": 3000, "instagram": 2200, "x": 280}.get(p.platform, 3000)
+    import re
+    chars = len(re.sub(r"https?://\S+", "x" * 23, p.text)) if p.platform == "x" else len(p.text)
+    return {"id": p.id, "campaign_id": p.campaign_id, "concept_id": p.concept_id, "platform": p.platform,
+            "hook": p.hook, "text": p.text, "hashtags": p.hashtags, "thread": p.thread,
+            "visual_idea": p.visual_idea, "cta": p.cta, "risk_flags": p.risk_flags, "status": p.status,
+            "edited": p.edited, "generation_mode": p.generation_mode, "char_count": chars, "char_limit": limit,
+            "scheduled_at": p.scheduled_at.isoformat() if p.scheduled_at else None,
+            "published_at": p.published_at.isoformat() if p.published_at else None,
+            "publish_mode": p.publish_mode or "", "external_url": p.external_url or "",
+            "metrics": p.metrics or {}, "metrics_source": p.metrics_source or "",
+            "engagement_rate": _eng_rate(p.metrics or {}),
+            "created_at": _ts(p.created_at), "updated_at": _ts(p.updated_at)}
+
+
+def _eng_rate(m: dict) -> float | None:
+    imp = int(m.get("impressions", 0) or 0)
+    if not imp:
+        return None
+    eng = int(m.get("likes", 0)) + 2 * int(m.get("comments", 0)) + 3 * int(m.get("shares", 0)) + int(m.get("clicks", 0))
+    return round(eng / imp, 4)

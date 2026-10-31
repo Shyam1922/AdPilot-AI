@@ -87,6 +87,33 @@ class Concept(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=now)
 
 
+class SocialPost(SQLModel, table=True):
+    """A draft post for LinkedIn / Instagram / X. Never published automatically."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    concept_id: int = Field(index=True)
+    platform: str            # linkedin | instagram | x
+    hook: str = ""
+    text: str = ""
+    hashtags: list[Any] = _json(list)
+    thread: list[Any] = _json(list)
+    visual_idea: str = ""
+    cta: str = ""
+    risk_flags: list[Any] = _json(list)
+    status: str = "generated"   # generated | approved | rejected | scheduled | published
+    edited: bool = False
+    generation_mode: str = "offline"
+    prompt_version: str = ""
+    scheduled_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    publish_mode: str = ""      # manual_share (user pressed Post on the platform) | simulated | synthetic_history
+    external_url: str = ""
+    metrics: dict[str, Any] = _json()      # impressions, likes, comments, shares, clicks
+    metrics_source: str = ""    # manual | simulated | synthetic_history
+    created_at: datetime = Field(default_factory=now)
+    updated_at: datetime = Field(default_factory=now)
+
+
 class Asset(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     campaign_id: Optional[int] = Field(default=None, foreign_key="campaign.id", index=True)
