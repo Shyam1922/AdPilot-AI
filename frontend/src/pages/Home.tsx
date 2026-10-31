@@ -1,55 +1,59 @@
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { api, fileUrl } from "@/lib/api";
 import { ApiOffline, ErrorState, Skeleton } from "@/components/ui";
-import Logo from "@/components/Logo";
+import TopBar, { HeroGlow } from "@/components/TopBar";
 
 export default function Home() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, retry: false });
   const brands = useQuery({ queryKey: ["brands"], queryFn: api.listBrands, enabled: health.isSuccess });
 
-  if (health.isError) return <ApiOffline onRetry={() => health.refetch()} />;
   if (brands.data && brands.data.length === 0) return <Navigate to="/brands/new" replace />;
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-3xl px-6 py-14">
-        <div className="mb-14 flex items-center justify-between">
-          <Logo />
+    <div className="relative isolate min-h-screen bg-canvas">
+      <HeroGlow />
+      <TopBar
+        right={
           <Link to="/brands/new" className="btn-primary">
             <Plus className="h-4 w-4" /> Add brand
           </Link>
-        </div>
+        }
+      />
 
-        <h1 className="font-serif text-3xl font-semibold text-ink">Your brands</h1>
-        <p className="mt-2 text-sm text-muted">Each brand keeps its own memory: products, claims, tone and what has worked.</p>
+      {health.isError ? (
+        <ApiOffline onRetry={() => health.refetch()} />
+      ) : (
+        <div className="mx-auto max-w-6xl px-6 pb-24 pt-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h1 className="display text-[54px] leading-[1.02]">Your brands</h1>
+            <p className="mt-4 text-[17px] text-muted">Each brand keeps its own memory: products, claims, tone and what has worked.</p>
+          </div>
 
-        <div className="mt-8 space-y-3">
-          {brands.isError && <ErrorState error={brands.error} onRetry={() => brands.refetch()} />}
-          {(health.isLoading || brands.isLoading) && [0, 1].map((i) => <Skeleton key={i} className="h-20" />)}
-          {brands.data?.map((b) => (
-            <Link
-              key={b.id}
-              to={`/brands/${b.id}`}
-              className="group flex items-center gap-4 rounded-xl border border-line bg-surface px-5 py-4 transition hover:border-brand-500/40 hover:bg-surface-2"
-            >
-              {b.logo_url ? (
-                <img src={fileUrl(b.logo_url)} alt="" className="h-11 w-11 rounded-lg bg-white object-contain p-1" />
-              ) : (
-                <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-600 font-semibold text-white">
-                  {b.name.slice(0, 1).toUpperCase()}
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-ink">{b.name}</p>
-                <p className="truncate text-sm text-muted">{b.website || b.profile.product_category || "Added manually"}</p>
+          <div className="mt-16 grid grid-cols-3 gap-6">
+            {brands.isError && (
+              <div className="col-span-3">
+                <ErrorState error={brands.error} onRetry={() => brands.refetch()} />
               </div>
-              <ArrowRight className="h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-brand-400" />
-            </Link>
-          ))}
+            )}
+            {(health.isLoading || brands.isLoading) && [0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[4/3]" />)}
+            {brands.data?.map((b) => (
+              <Link key={b.id} to={`/brands/${b.id}`} className="group">
+                <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-line bg-surface transition group-hover:border-white/20 group-hover:bg-surface-2">
+                  {b.logo_url ? (
+                    <img src={fileUrl(b.logo_url)} alt="" className="h-20 w-20 rounded-2xl bg-white object-contain p-2" />
+                  ) : (
+                    <span className="display text-[64px] leading-none text-white/90">{b.name.slice(0, 1).toUpperCase()}</span>
+                  )}
+                </div>
+                <p className="mt-4 text-[17px] font-medium text-white">{b.name}</p>
+                <p className="mt-1 truncate text-[15px] text-muted">{b.website?.replace(/^https?:\/\//, "").replace(/\/$/, "") || b.profile.product_category || "Added manually"}</p>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

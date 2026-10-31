@@ -64,16 +64,16 @@ export default function Campaigns() {
       )}
 
       {!!data?.length && (
-        <div className="overflow-hidden rounded-xl border border-line">
+        <div className="overflow-hidden rounded-2xl border border-line">
           {[...data].reverse().map((c) => (
             <Link
               key={c.id}
               to={`/brands/${id}/campaigns/${c.id}`}
-              className="group flex items-center gap-6 border-b border-line bg-surface px-6 py-4 transition last:border-0 hover:bg-surface-2"
+              className="group flex items-center gap-6 border-b border-line bg-surface px-6 py-5 transition last:border-0 hover:bg-surface-2"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-ink">{c.name}</p>
-                <p className="mt-0.5 text-sm text-muted">
+                <p className="truncate text-base font-medium text-white">{c.name}</p>
+                <p className="mt-1 text-sm text-muted">
                   <span className="capitalize">{c.objective}</span> · {c.channels.map(channelLabel).join(", ")}
                 </p>
               </div>
@@ -84,7 +84,7 @@ export default function Campaigns() {
                 <p className="text-xs">{c.counts.videos_ready} videos ready</p>
               </div>
               <StatusPill status={c.status} />
-              <ArrowRight className="h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-brand-400" />
+              <ArrowRight className="h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-white" />
             </Link>
           ))}
         </div>
@@ -134,9 +134,9 @@ function NewCampaignDialog({ brandId, onClose }: { brandId: number; onClose: () 
   const toggle = (c: string) => setChannels((xs) => (xs.includes(c) ? xs.filter((x) => x !== c) : [...xs, c]));
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => !create.isPending && onClose()}>
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => !create.isPending && onClose()}>
       <form
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-surface shadow-panel ring-1 ring-white/10"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#16171a] shadow-panel"
         onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
@@ -144,8 +144,8 @@ function NewCampaignDialog({ brandId, onClose }: { brandId: number; onClose: () 
         }}
       >
         <header className="flex items-center justify-between px-6 pb-2 pt-6">
-          <h2 className="font-serif text-xl font-semibold text-ink">New campaign</h2>
-          <button type="button" onClick={onClose} className="text-muted hover:text-ink">
+          <h2 className="display text-[28px] leading-tight">New campaign</h2>
+          <button type="button" onClick={onClose} className="text-muted transition hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </header>
@@ -164,12 +164,12 @@ function NewCampaignDialog({ brandId, onClose }: { brandId: number; onClose: () 
                   key={o.key}
                   onClick={() => setObjective(o.key)}
                   className={cn(
-                    "rounded-lg px-3 py-2.5 text-left ring-1 transition",
-                    objective === o.key ? "bg-brand-500/15 ring-brand-500/50" : "bg-white/[0.03] ring-white/10 hover:bg-white/5",
+                    "rounded-xl px-3 py-2.5 text-left transition",
+                    objective === o.key ? "bg-white text-black" : "bg-raised hover:bg-[#2b2b2b]",
                   )}
                 >
-                  <p className={cn("text-sm font-medium", objective === o.key ? "text-ink" : "text-ink/80")}>{o.label}</p>
-                  <p className="text-xs text-muted">{o.hint}</p>
+                  <p className={cn("text-sm font-medium", objective === o.key ? "text-black" : "text-white")}>{o.label}</p>
+                  <p className={cn("text-xs", objective === o.key ? "text-black/60" : "text-muted")}>{o.hint}</p>
                 </button>
               ))}
             </div>
@@ -184,8 +184,8 @@ function NewCampaignDialog({ brandId, onClose }: { brandId: number; onClose: () 
                   key={c.key}
                   onClick={() => toggle(c.key)}
                   className={cn(
-                    "rounded-full px-3.5 py-1.5 text-sm ring-1 transition",
-                    channels.includes(c.key) ? "bg-brand-600 text-white ring-brand-500" : "text-muted ring-white/10 hover:text-ink",
+                    "rounded-xl px-3.5 py-2 text-sm transition",
+                    channels.includes(c.key) ? "bg-white text-black" : "bg-raised text-muted hover:text-white",
                   )}
                 >
                   {c.label}

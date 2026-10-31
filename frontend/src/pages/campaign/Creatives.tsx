@@ -54,7 +54,7 @@ export default function Creatives() {
       <aside className="space-y-6">
         {groups.map((g) => (
           <div key={g.label}>
-            <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted">{g.label}</p>
+            <p className="mb-2 px-1 text-[13px] font-medium text-muted">{g.label}</p>
             <div className="space-y-1.5">
               {g.items.map((c) => (
                 <ConceptRow key={c.id} concept={c} active={c.id === selected.id} onClick={() => select(c.id)} />
@@ -78,8 +78,8 @@ function ConceptRow({ concept, active, onClick }: { concept: Concept; active: bo
     <button
       onClick={onClick}
       className={cn(
-        "w-full rounded-lg px-3.5 py-3 text-left transition",
-        active ? "bg-brand-500/15 ring-1 ring-brand-500/40" : "hover:bg-white/5",
+        "w-full rounded-xl px-3.5 py-3 text-left transition",
+        active ? "bg-white/[0.07] ring-1 ring-white/15" : "hover:bg-white/[0.04]",
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -155,7 +155,7 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-ink">
+            <h2 className="display text-[28px] leading-tight">
               {TYPE_LABEL[concept.concept_type] ?? concept.concept_type} <span className="font-normal text-muted">#{concept.id}</span>
             </h2>
             <StatusPill status={concept.status} />
@@ -178,7 +178,7 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
             <X className="h-4 w-4" /> {concept.status === "rejected" ? "Rejected" : "Reject"}
           </button>
           <button
-            className={cn("btn-primary", concept.status === "approved" && "bg-emerald-600 hover:bg-emerald-700")}
+            className={cn("btn-primary", concept.status === "approved" && "bg-emerald-400 hover:bg-emerald-300")}
             onClick={() => setStatus.mutate(concept.status === "approved" ? "generated" : "approved")}
             disabled={setStatus.isPending}
           >
@@ -188,9 +188,9 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
       </div>
 
       {(concept.parent_concept_id || concept.rationale) && (
-        <div className="rounded-xl bg-white/[0.03] px-5 py-4 text-sm ring-1 ring-white/5">
+        <div className="rounded-2xl bg-surface-2 px-5 py-4 text-sm">
           {concept.parent_concept_id && (
-            <p className="flex items-center gap-2 text-brand-300">
+            <p className="flex items-center gap-2 text-white">
               <GitBranch className="h-4 w-4" /> Variant of #{concept.parent_concept_id}
               {concept.changed_variables.length > 0 && <span className="text-muted">· changed {concept.changed_variables.join(", ")}</span>}
             </p>
@@ -210,7 +210,7 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
         </div>
         {concept.risk_flags.length > 0 && (
           <div className="mt-6 border-t border-line pt-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Claim guard</p>
+            <p className="mb-3 text-[13px] font-medium text-muted">Claim guard</p>
             <RiskFlags flags={concept.risk_flags} />
           </div>
         )}
@@ -257,7 +257,7 @@ function CopyInput({
         <span className="flex items-center gap-3 text-xs">
           {saving && <span className="text-muted">Saving…</span>}
           {max && <span className={cn(v.length > max ? "text-warn" : "text-muted")}>{v.length}/{max}</span>}
-          <button onClick={onRegenerate} disabled={regenerating} className="inline-flex items-center gap-1 text-muted hover:text-brand-300 disabled:opacity-50">
+          <button onClick={onRegenerate} disabled={regenerating} className="inline-flex items-center gap-1 text-muted hover:text-white disabled:opacity-50">
             <RefreshCw className={cn("h-3 w-3", regenerating && "animate-spin")} /> Rewrite
           </button>
         </span>
@@ -309,7 +309,7 @@ function PlatformCopy({ concept }: { concept: Concept }) {
           {active === "instagram" && pc.instagram && (
             <div className="space-y-3">
               <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">{pc.instagram.caption}</p>
-              <p className="text-sm text-brand-300">{pc.instagram.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}</p>
+              <p className="text-sm text-muted">{pc.instagram.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}</p>
             </div>
           )}
 
@@ -351,7 +351,7 @@ function Limited({ title, items, max }: { title: string; items: string[]; max: n
       </p>
       <ul className="space-y-1.5">
         {items.map((t, i) => (
-          <li key={i} className="flex items-center justify-between gap-3 rounded-md bg-white/[0.03] px-3 py-2">
+          <li key={i} className="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-3 py-2">
             <span className="truncate text-ink/90">{t}</span>
             <span className={cn("shrink-0 text-xs tabular-nums", t.length > max ? "text-danger" : "text-muted")}>{t.length}</span>
           </li>
@@ -403,7 +403,7 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
     <Card title="Video ad" action={asset?.status === "ready" ? <ModeBadge mode={asset.generation_mode} /> : undefined}>
       {asset?.status === "ready" && asset.url ? (
         <div className="space-y-3">
-          <video src={fileUrl(asset.url)} controls playsInline className="aspect-[9/16] w-full rounded-lg bg-black" />
+          <video src={fileUrl(asset.url)} controls playsInline className="aspect-[9/16] w-full rounded-xl bg-black" />
           <div className="flex items-center justify-between text-xs text-muted">
             <span>
               {asset.meta.duration_s ? `${asset.meta.duration_s}s · ` : ""}
@@ -420,16 +420,16 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
           </div>
         </div>
       ) : busy && asset ? (
-        <div className="flex aspect-[9/16] flex-col items-center justify-center rounded-lg bg-black/20 px-6 ring-1 ring-white/5">
-          <Spinner className="h-5 w-5 text-brand-400" />
+        <div className="flex aspect-[9/16] flex-col items-center justify-center rounded-xl bg-surface-2 px-6">
+          <Spinner className="h-5 w-5 text-white" />
           <p className="mt-3 text-sm text-ink">{asset.status === "queued" ? "Queued" : "Rendering"}</p>
           <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-brand-500 transition-all duration-500" style={{ width: `${Math.max(4, asset.progress * 100)}%` }} />
+            <div className="h-full rounded-full bg-white transition-all duration-500" style={{ width: `${Math.max(4, asset.progress * 100)}%` }} />
           </div>
           <p className="mt-2 text-xs text-muted">{Math.round(asset.progress * 100)}% · keep working meanwhile</p>
         </div>
       ) : (
-        <div className="flex aspect-[9/16] flex-col items-center justify-center rounded-lg bg-black/20 px-6 text-center ring-1 ring-white/5">
+        <div className="flex aspect-[9/16] flex-col items-center justify-center rounded-xl bg-surface-2 px-6 text-center">
           {asset?.status === "failed" && <p className="mb-3 text-sm text-rose-300">Render failed{asset.error ? `: ${asset.error}` : ""}</p>}
           <p className="text-sm text-muted">15-second 9:16 reel from this script, with the real product image composited in.</p>
           {health && !health.ffmpeg && <p className="mt-2 text-xs text-warn">FFmpeg is missing on the server.</p>}
@@ -445,7 +445,7 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
           {concept.video_script.map((b, i) => (
             <li key={i} className="text-sm">
               <p className="text-xs text-muted">
-                <span className="capitalize text-brand-300">{b.beat}</span> · {b.seconds}s
+                <span className="capitalize text-white">{b.beat}</span> · {b.seconds}s
               </p>
               <p className="text-ink/90">{b.on_screen_text}</p>
             </li>
@@ -471,7 +471,7 @@ function VisualBrief({ concept }: { concept: Concept }) {
   return (
     <section className="card">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-6 py-4 text-left">
-        <span className="text-[13px] font-semibold uppercase tracking-wider text-muted">Visual brief</span>
+        <span className="text-[15px] font-medium text-white">Visual brief</span>
         <ChevronDown className={cn("h-4 w-4 text-muted transition", open && "rotate-180")} />
       </button>
       {open && (

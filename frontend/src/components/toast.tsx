@@ -18,7 +18,7 @@ const ToastCtx = createContext<Ctx | null>(null);
 const ICON = {
   success: <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />,
   error: <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />,
-  info: <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />,
+  info: <Info className="mt-0.5 h-4 w-4 shrink-0 text-white" />,
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex w-80 flex-col gap-2">
         {items.map((t) => (
-          <div key={t.id} className="pointer-events-auto flex items-start gap-3 rounded-xl bg-surface-2 px-4 py-3 text-sm shadow-panel ring-1 ring-white/10">
+          <div key={t.id} className="pointer-events-auto flex items-start gap-3 rounded-2xl border border-line bg-[#16171a]/95 px-4 py-3 text-sm shadow-panel backdrop-blur-xl">
             {ICON[t.tone]}
             <span className="flex-1 text-ink">{t.msg}</span>
             <button onClick={() => dismiss(t.id)} className="text-muted hover:text-ink">

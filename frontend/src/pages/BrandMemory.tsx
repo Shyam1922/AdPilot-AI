@@ -23,7 +23,7 @@ export default function BrandMemory() {
       <Header brand={brand} />
 
       {brand.warnings.length > 0 && (
-        <div className="space-y-2 rounded-xl border border-amber-400/20 bg-amber-400/5 px-5 py-4">
+        <div className="space-y-2 rounded-2xl border border-amber-400/20 bg-amber-400/5 px-5 py-4">
           {brand.warnings.map((w, i) => (
             <p key={i} className="flex items-start gap-2.5 text-sm text-amber-100/90">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" /> {w}
@@ -52,12 +52,12 @@ export default function BrandMemory() {
         <Card title={`Products · ${p.products.length}`}>
           <div className="grid grid-cols-3 gap-4">
             {p.products.map((prod, i) => (
-              <div key={prod.name} className="rounded-xl bg-white/[0.03] p-4 ring-1 ring-white/5">
+              <div key={prod.name} className="rounded-xl bg-surface-2 p-4">
                 <div className="flex items-center gap-3">
                   <ProductImage brand={brand} index={i} />
                   <div className="min-w-0">
                     <p className="font-medium text-ink">{prod.name}</p>
-                    {prod.price && <p className="text-sm text-brand-300">{prod.price}</p>}
+                    {prod.price && <p className="text-sm text-white">{prod.price}</p>}
                   </div>
                 </div>
                 {prod.description && <p className="mt-3 text-sm text-muted">{prod.description}</p>}
@@ -145,7 +145,7 @@ function Header({ brand }: { brand: Brand }) {
               onClick={() => input.current?.click()}
               disabled={upload.isPending}
               title="Upload logo"
-              className="flex h-12 w-12 items-center justify-center rounded-xl border border-dashed border-line text-muted transition hover:border-brand-500 hover:text-brand-400"
+              className="flex h-12 w-12 items-center justify-center rounded-xl border border-dashed border-line text-muted transition hover:border-white/40 hover:text-white"
             >
               {upload.isPending ? <Spinner /> : <ImagePlus className="h-5 w-5" />}
             </button>
@@ -256,7 +256,7 @@ function Unknowns({ brand }: { brand: Brand }) {
                 <span className="text-sm text-amber-100/90">{u}</span>
                 {answering !== u && (
                   <span className="flex shrink-0 items-center gap-3 text-xs">
-                    <button className="font-medium text-brand-300 hover:text-white" onClick={() => { setAnswering(u); setFact(""); }}>
+                    <button className="font-medium text-white underline-offset-4 hover:underline" onClick={() => { setAnswering(u); setFact(""); }}>
                       Add fact
                     </button>
                     <button
@@ -285,7 +285,7 @@ function Unknowns({ brand }: { brand: Brand }) {
                     onKeyDown={(e) => e.key === "Escape" && setAnswering(null)}
                     autoFocus
                   />
-                  <button type="submit" className="btn-primary shrink-0 px-3 py-1.5 text-xs" disabled={!fact.trim() || resolve.isPending}>
+                  <button type="submit" className="btn-primary h-8 shrink-0 rounded-lg px-3 text-xs" disabled={!fact.trim() || resolve.isPending}>
                     {resolve.isPending ? <Spinner className="h-3.5 w-3.5" /> : "Save"}
                   </button>
                   <button type="button" className="shrink-0 text-xs text-muted hover:text-ink" onClick={() => setAnswering(null)}>
@@ -333,7 +333,7 @@ function Guardrails({ brand }: { brand: Brand }) {
       title="Guardrails"
       action={
         dirty && (
-          <button className="btn-primary px-3 py-1.5 text-xs" onClick={() => save.mutate()} disabled={save.isPending}>
+          <button className="btn-primary h-7 rounded-lg px-3 text-xs" onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending && <Spinner className="h-3.5 w-3.5" />} Save
           </button>
         )
@@ -361,9 +361,9 @@ function TagEditor({ label, items, onChange }: { label: string; items: string[];
   return (
     <div>
       <span className="label">{label}</span>
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-2 p-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface-2 p-2">
         {items.map((it) => (
-          <span key={it} className="inline-flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-xs text-ink/90 ring-1 ring-white/10">
+          <span key={it} className="inline-flex items-center gap-1 rounded-lg bg-raised px-2 py-1 text-xs text-body">
             {it}
             <button onClick={() => onChange(items.filter((x) => x !== it))} className="text-muted hover:text-danger">
               <X className="h-3 w-3" />
@@ -441,7 +441,7 @@ function List({ items, empty }: { items: string[]; empty: string }) {
     <ul className="space-y-2.5">
       {items.map((v) => (
         <li key={v} className="flex items-start gap-2.5 text-sm text-ink/90">
-          <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-brand-400" />
+          <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-white/60" />
           {v}
         </li>
       ))}

@@ -34,7 +34,7 @@ export default function GenerateConcepts({
   return (
     <div className="flex items-center gap-2">
       <select
-        className="input w-auto py-2"
+        className="input h-9 w-auto py-0"
         value={language}
         onChange={(e) => setLanguage(e.target.value as Language)}
         disabled={generate.isPending}

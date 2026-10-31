@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Brain, Check, ChevronsUpDown, Megaphone, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/format";
 import { ApiOffline } from "./ui";
-import Logo from "./Logo";
+import TopBar from "./TopBar";
 
 export default function Layout() {
   const { brandId } = useParams();
@@ -14,72 +14,57 @@ export default function Layout() {
   if (health.isError) {
     return (
       <div className="min-h-screen bg-canvas">
+        <TopBar />
         <ApiOffline onRetry={() => health.refetch()} />
       </div>
     );
   }
 
   const nav = [
-    { to: `/brands/${brandId}`, label: "Brand Memory", icon: Brain, end: true },
-    { to: `/brands/${brandId}/campaigns`, label: "Campaigns", icon: Megaphone, end: false },
+    { to: `/brands/${brandId}`, label: "Brand Memory", end: true },
+    { to: `/brands/${brandId}/campaigns`, label: "Campaigns", end: false },
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-line bg-sidebar">
-        <Link to="/" className="px-5 pb-6 pt-6">
-          <Logo />
-        </Link>
+    <div className="flex min-h-screen flex-col bg-canvas">
+      <TopBar
+        nav={nav.map(({ to, label, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) => cn("text-[15px] tracking-nav transition", isActive ? "text-white" : "text-muted hover:text-white")}
+          >
+            {label}
+          </NavLink>
+        ))}
+        right={<BrandSwitcher currentId={Number(brandId)} />}
+      />
 
-        <div className="px-3">
-          <BrandSwitcher currentId={Number(brandId)} />
-        </div>
-
-        <nav className="mt-6 flex-1 space-y-1 px-3">
-          {nav.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
-                  isActive ? "bg-brand-500/15 text-ink" : "text-muted hover:bg-white/5 hover:text-ink",
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className={cn("h-4 w-4", isActive && "text-brand-400")} />
-                  {label}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="space-y-1.5 border-t border-line px-5 py-4 text-xs text-muted">
-          <StatusRow ok={health.data?.llm_provider === "gemini"} label={health.data ? (health.data.llm_provider === "gemini" ? "Gemini" : "Offline generator") : "…"} prefix="LLM" />
-          <StatusRow ok={!!health.data?.ffmpeg} label={health.data ? (health.data.ffmpeg ? "Ready" : "Missing") : "…"} prefix="Video" />
-        </div>
-      </aside>
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-10 py-10">
+      <main className="flex-1">
+        <div className="mx-auto max-w-6xl px-6 py-14">
           <Outlet />
         </div>
       </main>
+
+      <footer className="border-t border-white/[0.08]">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-5 text-xs text-muted">
+          <StatusRow ok={health.data?.llm_provider === "gemini"} label={health.data ? (health.data.llm_provider === "gemini" ? "Gemini" : "Offline generator") : "…"} prefix="LLM" />
+          <StatusRow ok={!!health.data?.ffmpeg} label={health.data ? (health.data.ffmpeg ? "FFmpeg ready" : "FFmpeg missing") : "…"} prefix="Video" />
+          <span className="ml-auto">Nothing is published and no money is spent without your approval.</span>
+        </div>
+      </footer>
     </div>
   );
 }
 
 function StatusRow({ ok, label, prefix }: { ok: boolean; label: string; prefix: string }) {
   return (
-    <div className="flex items-center gap-2">
+    <span className="inline-flex items-center gap-2">
       <span className={cn("h-1.5 w-1.5 rounded-full", ok ? "bg-success" : "bg-warn")} />
-      <span>{prefix}</span>
-      <span className="ml-auto text-ink/80">{label}</span>
-    </div>
+      {prefix}
+      <span className="text-body">{label}</span>
+    </span>
   );
 }
 
@@ -103,19 +88,16 @@ function BrandSwitcher({ currentId }: { currentId: number }) {
 
   return (
     <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2.5 rounded-lg bg-white/5 px-3 py-2.5 text-left ring-1 ring-white/10 transition hover:bg-white/10"
-      >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-600 text-xs font-semibold text-white">
+      <button onClick={() => setOpen((o) => !o)} className="btn-ghost max-w-[220px] pl-2">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white text-[11px] font-semibold text-black">
           {(current?.name ?? "?").slice(0, 1).toUpperCase()}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{current?.name ?? "Loading…"}</span>
-        <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted" />
+        <span className="min-w-0 truncate">{current?.name ?? "Loading…"}</span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted transition", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-1.5 overflow-hidden rounded-lg bg-surface-2 py-1 shadow-panel ring-1 ring-white/10">
+        <div className="absolute right-0 top-full z-30 mt-2 w-60 overflow-hidden rounded-2xl border border-line bg-[#16171a]/95 p-1.5 shadow-panel backdrop-blur-xl">
           {brands?.map((b) => (
             <button
               key={b.id}
@@ -123,19 +105,19 @@ function BrandSwitcher({ currentId }: { currentId: number }) {
                 setOpen(false);
                 navigate(`/brands/${b.id}`);
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink/90 hover:bg-white/5"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-body hover:bg-white/5 hover:text-white"
             >
               <span className="flex-1 truncate">{b.name}</span>
-              {b.id === currentId && <Check className="h-4 w-4 text-brand-400" />}
+              {b.id === currentId && <Check className="h-4 w-4 text-white" />}
             </button>
           ))}
-          <div className="my-1 border-t border-line" />
+          <div className="my-1.5 border-t border-line" />
           <button
             onClick={() => {
               setOpen(false);
               navigate("/brands/new");
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted hover:bg-white/5 hover:text-ink"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-muted hover:bg-white/5 hover:text-white"
           >
             <Plus className="h-4 w-4" /> Add brand
           </button>

@@ -15,14 +15,14 @@ export default function Strategy() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-line bg-gradient-to-br from-brand-500/10 via-surface to-surface p-8">
+      <section className="rounded-2xl border border-line bg-surface p-10">
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-[13px] font-semibold uppercase tracking-wider text-muted">Positioning</span>
+          <span className="text-sm text-muted">Positioning</span>
           <ModeBadge mode={detail.campaign.generation_mode} />
         </div>
-        <p className="font-serif text-2xl leading-relaxed text-ink">{s.positioning_statement}</p>
-        <p className="mt-5 text-sm text-muted">
-          Primary KPI <span className="ml-2 text-brand-300">{s.primary_kpi}</span>
+        <p className="display text-[32px] leading-[1.25]">{s.positioning_statement}</p>
+        <p className="mt-6 text-sm text-muted">
+          Primary KPI <span className="ml-2 text-white">{s.primary_kpi}</span>
         </p>
       </section>
 
@@ -34,7 +34,7 @@ export default function Strategy() {
                 <li key={p}>· {p}</li>
               ))}
             </ul>
-            <p className="mt-4 border-l-2 border-brand-500 pl-3 text-sm text-ink">{seg.message}</p>
+            <p className="mt-4 border-l-2 border-white pl-3 text-sm text-ink">{seg.message}</p>
           </Card>
         ))}
       </div>
@@ -64,8 +64,8 @@ export default function Strategy() {
         <Card title="First 7 days">
           <div className="grid grid-cols-7 gap-2">
             {s.content_calendar.map((d) => (
-              <div key={`${d.day}-${d.channel}`} className="rounded-lg bg-white/[0.03] p-3 ring-1 ring-white/5">
-                <p className="text-xs font-semibold text-brand-300">Day {d.day}</p>
+              <div key={`${d.day}-${d.channel}`} className="rounded-xl bg-surface-2 p-3">
+                <p className="text-xs font-medium text-white">Day {d.day}</p>
                 <p className="mt-1 text-xs text-muted">{channelLabel(d.channel)}</p>
                 <p className="mt-2 text-sm leading-snug text-ink/90">{d.content}</p>
               </div>
@@ -115,7 +115,7 @@ function ChipGroup({ label, items }: { label: string; items: string[] }) {
 function NextStep({ hasConcepts, campaignId, base }: { hasConcepts: boolean; campaignId: number; base: string }) {
   const navigate = useNavigate();
   return (
-    <div className="flex items-center justify-between rounded-xl border border-line bg-surface px-6 py-5">
+    <div className="flex items-center justify-between rounded-2xl border border-line bg-surface px-6 py-5">
       <div>
         <p className="font-medium text-ink">{hasConcepts ? "Creatives are ready" : "Next: creatives"}</p>
         <p className="text-sm text-muted">

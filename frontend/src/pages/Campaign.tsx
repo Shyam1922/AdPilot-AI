@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useOutletContext, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/format";
 import { ErrorState, Skeleton, StatusPill } from "@/components/ui";
@@ -51,14 +51,14 @@ export default function Campaign() {
 
   return (
     <div>
-      <Link to={`/brands/${brandId}/campaigns`} className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
+      <Link to={`/brands/${brandId}/campaigns`} className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-white">
         <ArrowLeft className="h-4 w-4" /> Campaigns
       </Link>
 
-      <div className="mb-8 flex items-start justify-between gap-6">
+      <div className="mb-10 flex items-end justify-between gap-6">
         <div className="min-w-0">
-          <h1 className="truncate font-serif text-[28px] font-semibold leading-tight text-ink">{c.name}</h1>
-          <p className="mt-1.5 text-sm text-muted">
+          <h1 className="display truncate text-[40px] leading-[1.1]">{c.name}</h1>
+          <p className="mt-3 text-[15px] text-muted">
             <span className="capitalize">{c.objective}</span> · {c.channels.map(channelLabel).join(", ")}
             {c.product_focus && <> · {c.product_focus}</>}
           </p>
@@ -66,27 +66,22 @@ export default function Campaign() {
         <StatusPill status={c.status} />
       </div>
 
-      <nav className="mb-8 flex gap-1 border-b border-line">
+      <nav className="mb-10 grid grid-cols-4 gap-6">
         {STEPS.map((s, i) => (
           <NavLink
             key={s.to}
             to={`${base}/${s.to}`}
             className={({ isActive }) =>
-              cn(
-                "-mb-px flex items-center gap-2.5 border-b-2 px-4 py-3 text-sm transition",
-                isActive ? "border-brand-500 text-ink" : "border-transparent text-muted hover:text-ink",
-              )
+              cn("group border-t pt-4 transition", isActive ? "border-white" : "border-line hover:border-white/40")
             }
           >
-            <span
-              className={cn(
-                "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold",
-                done[s.to] ? "bg-brand-500/20 text-brand-300" : "bg-white/5 text-muted",
-              )}
-            >
-              {i + 1}
-            </span>
-            {s.label}
+            {({ isActive }) => (
+              <span className="flex items-baseline gap-3">
+                <span className={cn("font-serif text-2xl font-light leading-none", isActive ? "text-white" : "text-muted")}>0{i + 1}</span>
+                <span className={cn("text-[15px] tracking-nav", isActive ? "text-white" : "text-muted group-hover:text-white")}>{s.label}</span>
+                {done[s.to] && <Check className={cn("h-3.5 w-3.5 self-center", isActive ? "text-white" : "text-muted")} />}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

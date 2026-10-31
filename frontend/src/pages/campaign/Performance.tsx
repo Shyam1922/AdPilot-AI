@@ -11,16 +11,16 @@ import type { Analytics, Iteration, SampleStatus } from "@/lib/types";
 import { useCampaign } from "../Campaign";
 
 const SAMPLE: Record<SampleStatus, { label: string; color: string }> = {
-  insufficient_data: { label: "Insufficient data", color: "#4a3d66" },
-  early_signal: { label: "Early signal", color: "#7c5cc4" },
-  directional: { label: "Directional", color: "#b79cff" },
+  insufficient_data: { label: "Insufficient data", color: "#3a3b40" },
+  early_signal: { label: "Early signal", color: "#8a8b90" },
+  directional: { label: "Directional", color: "#f5f5f5" },
 };
 
-const AXIS = { fontSize: 11, fill: "#8f84ad" };
-const GRID = "#2a1f40";
+const AXIS = { fontSize: 11, fill: "#848484" };
+const GRID = "#1f2023";
 const TOOLTIP = {
-  contentStyle: { background: "#271a44", border: "1px solid #3a2c59", borderRadius: 8, color: "#f1edfa", fontSize: 12 },
-  labelStyle: { color: "#a79cc4" },
+  contentStyle: { background: "#16171a", border: "1px solid #26272b", borderRadius: 12, color: "#ededed", fontSize: 12 },
+  labelStyle: { color: "#848484" },
   cursor: { fill: "rgba(255,255,255,0.03)" },
 };
 
@@ -129,13 +129,13 @@ function Overview({ a }: { a: Analytics }) {
       </div>
 
       {a.is_simulated && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 text-sm text-amber-100">
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 text-sm text-amber-100">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
           These numbers are simulated to exercise the loop. They are not real ad performance.
         </div>
       )}
 
-      <div className="grid grid-cols-4 overflow-hidden rounded-xl border border-line bg-line [&>*]:bg-surface" style={{ gap: 1 }}>
+      <div className="grid grid-cols-4 overflow-hidden rounded-2xl border border-line bg-line [&>*]:bg-surface" style={{ gap: 1 }}>
         <Kpi label="Impressions" value={num(t.impressions)} />
         <Kpi label="Clicks" value={num(t.clicks)} />
         <Kpi label="CTR" value={pct(t.ctr)} sub={`${num(t.clicks)} / ${num(t.impressions)}`} highlight={metric === "ctr"} />
@@ -159,7 +159,7 @@ function Overview({ a }: { a: Analytics }) {
                   {bars.map((b, i) => (
                     <Cell key={i} fill={b.color} />
                   ))}
-                  <ErrorBar dataKey="err" width={6} strokeWidth={1.5} stroke="#e9e3fb" direction="y" />
+                  <ErrorBar dataKey="err" width={6} strokeWidth={1.5} stroke="#ffffff" direction="y" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -181,14 +181,14 @@ function Overview({ a }: { a: Analytics }) {
                 <XAxis dataKey="day" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} tickFormatter={(d: string) => d.slice(5)} />
                 <YAxis tick={AXIS} tickLine={false} axisLine={false} />
                 <Tooltip {...TOOLTIP} />
-                <Line type="monotone" dataKey="clicks" stroke="#a78bfa" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="conversions" stroke="#34d399" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="clicks" stroke="#f5f5f5" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="conversions" stroke="#8a8b90" strokeWidth={2} strokeDasharray="4 3" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
           <div className="mt-3 flex gap-4 text-xs text-muted">
-            <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 bg-brand-400" /> Clicks</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 bg-success" /> Conversions</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 bg-[#f5f5f5]" /> Clicks</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-3 border-t-2 border-dashed border-[#8a8b90]" /> Conversions</span>
           </div>
         </Card>
       </div>
@@ -252,11 +252,11 @@ function Overview({ a }: { a: Analytics }) {
 function Kpi({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
   return (
     <div className="px-5 py-4">
-      <p className={cn("text-xs", highlight ? "text-brand-300" : "text-muted")}>
+      <p className={cn("text-xs", highlight ? "text-white" : "text-muted")}>
         {label}
         {highlight && " · objective"}
       </p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</p>
+      <p className="mt-2 font-serif text-[28px] font-light leading-none tabular-nums text-white">{value}</p>
       {sub && <p className="mt-0.5 text-[11px] tabular-nums text-muted">{sub}</p>}
     </div>
   );
@@ -280,8 +280,8 @@ function Optimization({ iterations, campaignId }: { iterations: Iteration[]; cam
     <section className="space-y-4 pt-4">
       <div className="flex items-end justify-between gap-6">
         <div>
-          <h2 className="font-serif text-xl font-semibold text-ink">Optimization</h2>
-          <p className="mt-1 text-sm text-muted">Ranks concepts on the numbers above, explains why, and drafts the next variants. Learnings go back to Brand Memory.</p>
+          <h2 className="display text-[32px] leading-tight">Optimization</h2>
+          <p className="mt-2 text-[15px] text-muted">Ranks concepts on the numbers above, explains why, and drafts the next variants. Learnings go back to Brand Memory.</p>
         </div>
         <button className="btn-primary shrink-0" onClick={() => iterate.mutate()} disabled={iterate.isPending}>
           {iterate.isPending ? <Spinner /> : <Sparkles className="h-4 w-4" />} {iterate.isPending ? "Analyzing…" : "Run optimization"}
@@ -299,7 +299,7 @@ function IterationCard({ it, round }: { it: Iteration; round: number }) {
   return (
     <div className="card p-6">
       <div className="mb-4 flex items-center gap-3">
-        <span className="text-sm font-semibold text-ink">Round {round}</span>
+        <span className="text-[15px] font-medium text-white">Round {round}</span>
         <ModeBadge mode={it.generation_mode} />
         {it.data_sources.map((s) => (
           <SourceBadge key={s} source={s} />
@@ -309,7 +309,7 @@ function IterationCard({ it, round }: { it: Iteration; round: number }) {
 
       <div className="mt-6 grid grid-cols-2 gap-8">
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Signals used</p>
+          <p className="mb-2 text-[13px] font-medium text-muted">Signals used</p>
           <ul className="space-y-1.5 text-sm text-ink/80">
             {it.selected_signals.map((s, i) => (
               <li key={i}>
@@ -319,7 +319,7 @@ function IterationCard({ it, round }: { it: Iteration; round: number }) {
           </ul>
         </div>
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-amber-300/80">Limitations</p>
+          <p className="mb-2 text-[13px] font-medium text-amber-300/80">Limitations</p>
           <ul className="space-y-1.5 text-sm text-ink/80">
             {it.limitations.map((l, i) => (
               <li key={i}>· {l}</li>
@@ -330,17 +330,17 @@ function IterationCard({ it, round }: { it: Iteration; round: number }) {
 
       {it.variants.length > 0 && (
         <div className="mt-6 border-t border-line pt-5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Next variants</p>
+          <p className="mb-3 text-[13px] font-medium text-muted">Next variants</p>
           <div className="grid grid-cols-2 gap-3">
             {it.variants.map((v) => (
               <Link
                 key={v.id}
                 to={`${base}/creatives?c=${v.id}`}
-                className="group rounded-lg bg-white/[0.03] p-4 ring-1 ring-white/5 transition hover:ring-brand-500/40"
+                className="group rounded-xl bg-surface-2 p-4 ring-1 ring-transparent transition hover:ring-white/20"
               >
                 <p className="flex items-center gap-1.5 text-xs text-muted">
                   {v.is_exploration ? (
-                    <span className="text-brand-300">Exploration</span>
+                    <span className="text-white">Exploration</span>
                   ) : (
                     <>
                       <GitBranch className="h-3 w-3" /> #{v.parent_concept_id} · {v.changed_variables.join(", ")}
@@ -349,7 +349,7 @@ function IterationCard({ it, round }: { it: Iteration; round: number }) {
                 </p>
                 <p className="mt-1.5 text-sm text-ink">{v.hook}</p>
                 <p className="mt-1 line-clamp-2 text-xs text-muted">{v.rationale}</p>
-                <p className="mt-2 inline-flex items-center gap-1 text-xs text-brand-300 opacity-0 transition group-hover:opacity-100">
+                <p className="mt-2 inline-flex items-center gap-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
                   Open <ArrowRight className="h-3 w-3" />
                 </p>
               </Link>

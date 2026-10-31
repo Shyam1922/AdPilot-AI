@@ -18,7 +18,7 @@ const STEPS: { key: CampaignStatus; label: string }[] = [
 
 const INTEGRATION: Record<IntegrationStatus["status"], { label: string; cls: string }> = {
   working: { label: "Working", cls: "text-success" },
-  export_only: { label: "Export only", cls: "text-sky-300" },
+  export_only: { label: "Export only", cls: "text-body" },
   simulated: { label: "Simulated", cls: "text-amber-300" },
   not_connected: { label: "Not connected", cls: "text-muted" },
 };
@@ -67,14 +67,14 @@ export default function Launch() {
                   <span
                     className={cn(
                       "flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold",
-                      done ? "bg-brand-600 text-white" : "bg-white/5 text-muted ring-1 ring-white/10",
+                      done ? "bg-white text-black" : "bg-raised text-muted",
                     )}
                   >
                     {locked ? <Lock className="h-3.5 w-3.5" /> : done ? <Check className="h-4 w-4" /> : i + 1}
                   </span>
                   <span className={cn("text-xs", done ? "text-ink" : "text-muted")}>{s.label}</span>
                 </div>
-                {i < STEPS.length - 1 && <div className={cn("mx-3 mb-6 h-px flex-1", i < reached ? "bg-brand-500" : "bg-line")} />}
+                {i < STEPS.length - 1 && <div className={cn("mx-3 mb-6 h-px flex-1", i < reached ? "bg-white" : "bg-line")} />}
               </div>
             );
           })}
@@ -97,8 +97,8 @@ export default function Launch() {
             <ul className="divide-y divide-line">
               {approved.map((x) => (
                 <li key={x.id} className="flex items-center justify-between gap-4 py-3 first:pt-0">
-                  <Link to={`${base}/creatives?c=${x.id}`} className="min-w-0 hover:text-brand-300">
-                    <p className="truncate text-sm text-ink">{x.headline || x.hook}</p>
+                  <Link to={`${base}/creatives?c=${x.id}`} className="group min-w-0">
+                    <p className="truncate text-sm text-ink transition group-hover:text-white">{x.headline || x.hook}</p>
                     <p className="text-xs text-muted">
                       <span className="capitalize">{x.concept_type}</span> · {x.target_segment}
                     </p>
@@ -153,7 +153,7 @@ function Integrations() {
                 </div>
                 {it.notes && <p className="mt-0.5 text-xs leading-relaxed text-muted">{it.notes}</p>}
                 {it.docs_url && (
-                  <a href={it.docs_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-brand-300 hover:text-white">
+                  <a href={it.docs_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-muted transition hover:text-white">
                     Docs <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -162,7 +162,6 @@ function Integrations() {
           })}
         </ul>
       )}
-      <p className="mt-5 border-t border-line pt-4 text-xs text-muted">Nothing is published and no money is spent without your approval.</p>
     </Card>
   );
 }
