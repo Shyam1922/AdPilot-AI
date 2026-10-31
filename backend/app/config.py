@@ -48,6 +48,13 @@ class Settings:
     video_fps: int = int(os.getenv("VIDEO_FPS", "30"))
     music_path: str = os.getenv("MUSIC_PATH", "")  # optional royalty-free track you own
 
+    # Meko (Yugabyte) shared agent memory, over MCP. Optional: the app works without it.
+    meko_api_key: str = os.getenv("MEKO_API_KEY", "")
+    meko_url: str = os.getenv("MEKO_URL", "https://mcp.mekodata.ai/mcp")
+    meko_auth_header: str = os.getenv("MEKO_AUTH_HEADER", "Authorization")
+    meko_auth_scheme: str = os.getenv("MEKO_AUTH_SCHEME", "Bearer")
+    meko_timeout_s: float = float(os.getenv("MEKO_TIMEOUT_S", "8"))
+
     seed_demo: bool = _bool("SEED_DEMO", True)
 
 

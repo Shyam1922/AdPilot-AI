@@ -4,7 +4,20 @@
 AdPilot AI learns a brand once, then plans, creates, launches and improves its campaigns, and every claim it makes is grounded in the brand's own product facts.
 
 > HackCBS 9.0 · 24-hour build · Team of 2
-> Status: architecture locked, backend scaffold started (`config`, `db`, `models`, `schemas`, `services/extractor.py`).
+> **Status (Sat 31 Oct, 14:10 IST):** G1 backend done. Website → Brand Memory → strategy → 5 claim-checked ad concepts works end to end through the API (offline mode tested; Gemini path ready). **Meko integration live** (verified against the real Meko server). Next: MP4 video renderer (G2), then analytics + optimization loop (G3).
+
+### Progress at a glance
+| Area | State |
+|---|---|
+| Website extraction (JSON-LD, Open Graph, Shopify feed, SSRF guard, hidden-text stripping) | ✅ Done |
+| Brand Memory (claim grounding, audience hypotheses, unknowns, brand colours) | ✅ Done |
+| Strategist (6 objectives) · Ad generator (5 concepts) · Claim guard · Platform copy | ✅ Done |
+| FastAPI app (14 endpoints) + tests (`pytest -q`, 4 passing) | ✅ Done |
+| Frontend mock data from real API responses (`sample_data/fixtures/`) | ✅ Done |
+| Meko shared agent memory (datapack per brand, memories, context search, conversation traces) | ✅ Live |
+| MP4 video ad renderer + export ZIP | ⏳ G2, in progress |
+| Metrics, ranking, next-variant optimization, learnings → Meko | ⏳ G3 |
+| Frontend workspace | ⏳ Teammate's track |
 
 ---
 
@@ -285,6 +298,22 @@ The provider-adapter interface is `connect · validate · prepare_campaign · pu
 
 The Integrations page shows exactly these statuses.
 
+### Meko (by Yugabyte): shared agent memory ✅ live
+[Meko](https://mekodata.netlify.app/) is Yugabyte's memory and knowledge layer for AI agents, built on YugabyteDB. AdPilot uses it as the cloud side of Brand Memory, so its agents share what they know and learn.
+
+| AdPilot agent | When | Meko tools used |
+|---|---|---|
+| `adpilot-brand-agent` | After a brand is analyzed or edited | `conversation_create` → `datapack_create` (one datapack per brand) → `conversation_add_message` (sync trace) → `memory_add` (products, approved claims, tone, unknowns) |
+| `adpilot-creative-agent` | Before and after generating concepts | `conversation_create` → `context_search` (past learnings fed into the Gemini prompt) → `conversation_add_message` (what was generated and the plan it followed) |
+| `adpilot-analyst-agent` | After optimization (G3) | `memory_add` (what worked, labelled with its data source) → `memory_promote` (shared with all agents) |
+
+How it's built:
+- `backend/app/services/meko_memory.py` speaks MCP's streamable-HTTP protocol directly with `httpx` (no SDK dependency, because the `mcp` package's client API changed between v1 and v2).
+- `backend/app/services/meko_sync.py` runs the syncs as background jobs, so Meko never slows the UI. The result is stored in `brand.integrations.meko` (`status`, `datapack_id`, `conversations`, …).
+- Every call has a timeout. If Meko is unreachable, the app continues on local Brand Memory and shows the error on the Integrations page.
+- Differences from the public docs, found against the live server (Meko MCP 3.2.4, 42 tools): `conversation_id` is required by `datapack_create`, `memory_add`, `context_search` and `memory_promote`; `metadata` must be a JSON string; errors can arrive wrapped as `{"result": "<json>"}`.
+- Verify any time: `python -m app.scripts.meko_check` (ends with `ALL CALLS OK`), or `POST /api/integrations/meko/test`.
+
 ---
 
 ## 12. Tech stack
@@ -316,26 +345,26 @@ adpilot-ai/
 │   ├── .env.example
 │   ├── requirements.txt
 │   ├── app/
-│   │   ├── main.py              FastAPI app, CORS, static /files, routers
-│   │   ├── config.py  db.py  models.py
-│   │   ├── api/                 brands.py campaigns.py concepts.py assets.py analytics.py integrations.py
-│   │   ├── schemas/             brand.py concept.py analytics.py
+│   │   ├── main.py              ✅ FastAPI app, CORS, /files, /demo-store, routers, /api/health
+│   │   ├── config.py  db.py  models.py  serializers.py   ✅
+│   │   ├── api/                 ✅ common brands campaigns concepts assets integrations · ⏳ analytics
+│   │   ├── schemas/             ✅ brand.py concept.py
 │   │   ├── services/
-│   │   │   ├── extractor.py         SSRF-safe fetch + parsing
-│   │   │   ├── llm.py               Gemini + offline providers, JSON + retry
-│   │   │   ├── prompt_templates.py  versioned prompts
-│   │   │   ├── brand_analyzer.py    → BrandProfile
-│   │   │   ├── strategist.py        → CampaignStrategy
-│   │   │   ├── ad_generator.py      → 5 concepts + platform copy + video script
-│   │   │   ├── output_validation.py claim guard, diversity, schema repair
-│   │   │   ├── video_service.py     Pillow/FFmpeg renderer (+ optional B-roll/TTS)
-│   │   │   ├── metrics_calculator.py
-│   │   │   ├── concept_ranker.py    Wilson CI, P(best), sample gates
-│   │   │   ├── iteration_policy.py  explore/exploit variant plan
-│   │   │   ├── export_service.py    ZIP export
-│   │   │   └── integrations/        base.py export.py simulated.py google_ads.py meta.py (stubs)
-│   │   └── assets/fonts/
-│   └── tests/                   test_metrics.py test_output_validation.py test_iteration_policy.py test_extractor.py test_api_flow.py
+│   │   │   ├── extractor.py         ✅ SSRF-safe fetch, JSON-LD/OG/Shopify parsing, hidden-text stripping
+│   │   │   ├── llm.py               ✅ Gemini + offline fallback, JSON validation + 1 retry
+│   │   │   ├── brand_analyzer.py    ✅ → BrandProfile with grounded claims
+│   │   │   ├── strategist.py        ✅ → CampaignStrategy
+│   │   │   ├── ad_generator.py      ✅ → 5 concepts + platform copy + video script
+│   │   │   ├── output_validation.py ✅ claim guard, diversity, platform limits
+│   │   │   ├── text_utils.py        ✅ similarity, trimming helpers
+│   │   │   ├── meko_memory.py       ✅ Meko MCP client (memories, context search, traces)
+│   │   │   ├── meko_sync.py         ✅ background Meko sync jobs
+│   │   │   ├── video_service.py     ⏳ Pillow/FFmpeg renderer (G2)
+│   │   │   ├── export_service.py    ⏳ ZIP export (G2)
+│   │   │   ├── metrics_calculator.py  concept_ranker.py  iteration_policy.py   ⏳ (G3)
+│   │   ├── scripts/             ✅ make_demo_images.py export_fixtures.py meko_check.py
+│   │   └── assets/fonts/        ✅ Poppins, Lora (SIL Open Font License)
+│   └── tests/                   ✅ conftest.py test_api_flow.py · ⏳ metrics / ranking / iteration tests
 ├── frontend/
 │   └── src/  pages/ components/ lib/api.ts lib/types.ts mocks/
 └── sample_data/
@@ -370,7 +399,11 @@ The full request/response shapes and TypeScript types are in **[docs/API_CONTRAC
 | POST | `/api/campaigns/{id}/metrics` | CSV upload |
 | GET | `/api/campaigns/{id}/analytics` | Totals, per-concept, daily, data provenance |
 | POST | `/api/campaigns/{id}/iterate` | Ranking, signals, limitations, next variants |
-| GET | `/api/integrations` | Honest provider statuses |
+| GET | `/api/integrations` | Honest provider statuses (Meko status is live) |
+| POST | `/api/integrations/meko/test` | Live round-trip to Meko: tool count + datapacks |
+| GET | `/api/concepts/{id}` | One concept with its latest video |
+
+Built so far: health, brands (analyze, list, get, patch, uploads), campaigns (create, list, get, patch), concepts (generate, get, patch, regenerate), assets (get, list), integrations (list, Meko test). The video, export, metrics, analytics and iterate endpoints arrive in G2–G3.
 
 ---
 
@@ -453,17 +486,18 @@ Have ready: the backup MP4, a pre-seeded database (`scripts/reset_demo`), and a 
 
 ## 19. Getting started
 
-> Commands become valid as each piece lands. See the plans for the order.
-
 ```bash
 # backend
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env            # add GEMINI_API_KEY (optional; offline mode works without it)
-ffmpeg -version                 # must be installed and on PATH
+cp .env.example .env            # Windows: copy .env.example .env
+#   GEMINI_API_KEY=...  optional; offline mode works without it
+#   MEKO_API_KEY=...    from cloud.mekodata.ai → Settings → API Keys
+ffmpeg -version                 # must be installed and on PATH (Windows: winget install Gyan.FFmpeg)
+pytest -q                       # 4 passed
+python -m app.scripts.meko_check   # ends with ALL CALLS OK when Meko is configured
 uvicorn app.main:app --reload --port 8000
-pytest -q
 
 # frontend
 cd frontend
@@ -473,3 +507,9 @@ npm run dev                     # http://localhost:5173
 ```
 
 API docs are auto-generated at `http://localhost:8000/docs`.
+
+**Try it in 30 seconds:** open `/docs` → `POST /api/brands/analyze` with `{"url": "https://demo.adpilot.local/"}` → `POST /api/campaigns` with `{"brand_id": 1, "objective": "sales"}` → `POST /api/campaigns/1/concepts/generate`. A few seconds after analyzing, `GET /api/brands/1` shows `integrations.meko.status = "synced"`.
+
+> If you pulled a newer version and the server errors with "no such column", delete `backend/adpilot.db`; it is recreated on start (the schema is still changing during the hackathon).
+
+**Frontend without the backend:** set `VITE_USE_MOCKS=true` and read the JSON files in `sample_data/fixtures/` (real API responses).

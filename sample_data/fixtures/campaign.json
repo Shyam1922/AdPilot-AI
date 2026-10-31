@@ -1,0 +1,151 @@
+{
+  "id": 1,
+  "brand_id": 1,
+  "name": "Sales · Velvaa Saffron Dew Serum",
+  "objective": "sales",
+  "channels": [
+    "instagram",
+    "meta_ads",
+    "google_ads"
+  ],
+  "product_focus": "Velvaa Saffron Dew Serum",
+  "audience_note": "",
+  "budget_note": "",
+  "status": "generated",
+  "strategy": {
+    "objective": "sales",
+    "positioning_statement": "For people in hot, humid Indian cities, Velvaa Skin's Saffron Dew Serum offers lightweight, non-sticky texture that absorbs quickly. What sets it apart: rooted in familiar Indian ingredients.",
+    "primary_kpi": "Purchase conversion rate, CPA and ROAS",
+    "segments": [
+      {
+        "name": "People in hot, humid Indian cities",
+        "pain_points": [
+          "Products that don't feel heavy or sticky in the heat"
+        ],
+        "message": "Saffron Dew Serum: Lightweight, non-sticky texture that absorbs quickly"
+      },
+      {
+        "name": "Skincare beginners who want a short routine",
+        "pain_points": [
+          "A simple routine that is easy to stick to"
+        ],
+        "message": "Saffron Dew Serum: Saffron extract with 5% niacinamide"
+      },
+      {
+        "name": "People who prefer fragrance-free, gentle products",
+        "pain_points": [
+          "Avoiding added fragrance and harsh feel"
+        ],
+        "message": "Saffron Dew Serum: Fragrance-free and suitable for daily use"
+      }
+    ],
+    "campaign_themes": [
+      "Familiar Indian ingredients, modern routine",
+      "Made for Indian weather",
+      "Gentle by default",
+      "Your next favourite, for everyday"
+    ],
+    "creative_angles": [
+      "Problem → solution: name the everyday frustration, show the product fixing it",
+      "Product demo: texture, size and how to use it in under 10 seconds",
+      "Origin story: why the brand started and what it refuses to do",
+      "Value framing: what you get at this price (only real prices, no invented discounts)",
+      "Customer voice: dramatized everyday moment, clearly labelled until real reviews exist"
+    ],
+    "channel_plan": [
+      {
+        "channel": "instagram",
+        "role": "Discovery and brand feel",
+        "formats": [
+          "Reels 9:16",
+          "Feed 4:5",
+          "Stories"
+        ]
+      },
+      {
+        "channel": "meta_ads",
+        "role": "Paid reach and retargeting",
+        "formats": [
+          "Reels ads 9:16",
+          "Feed ads 4:5"
+        ]
+      },
+      {
+        "channel": "google_ads",
+        "role": "Capture people already searching",
+        "formats": [
+          "Responsive search ads",
+          "Performance Max (later)"
+        ]
+      }
+    ],
+    "ctas": [
+      "Shop now",
+      "Add to cart",
+      "Buy now"
+    ],
+    "content_calendar": [
+      {
+        "day": 1,
+        "channel": "instagram",
+        "content": "Problem creative for Saffron Dew Serum",
+        "concept_type": "problem"
+      },
+      {
+        "day": 2,
+        "channel": "meta_ads",
+        "content": "Demo creative for Saffron Dew Serum",
+        "concept_type": "demo"
+      },
+      {
+        "day": 3,
+        "channel": "google_ads",
+        "content": "Storytelling creative for Saffron Dew Serum",
+        "concept_type": "storytelling"
+      },
+      {
+        "day": 4,
+        "channel": "instagram",
+        "content": "Offer creative for Saffron Dew Serum",
+        "concept_type": "offer"
+      },
+      {
+        "day": 5,
+        "channel": "meta_ads",
+        "content": "Testimonial style creative for Saffron Dew Serum",
+        "concept_type": "testimonial-style"
+      },
+      {
+        "day": 6,
+        "channel": "google_ads",
+        "content": "Demo creative for Saffron Dew Serum",
+        "concept_type": "demo"
+      },
+      {
+        "day": 7,
+        "channel": "instagram",
+        "content": "Problem creative for Saffron Dew Serum",
+        "concept_type": "problem"
+      }
+    ],
+    "assumptions": [
+      "Audience segments are hypotheses (medium, medium, medium confidence) until tested",
+      "No budget or past performance data yet; channel mix is a starting point, not a forecast"
+    ],
+    "not_claimed": [
+      "No performance predictions (reach, sales or ROAS)",
+      "No discounts or offers unless you confirm one",
+      "No reviews, ratings or certifications that are not on your site",
+      "Not confirmed: Any current offer or discount (none found on the site)",
+      "Not confirmed: Customer reviews or ratings you are allowed to quote (none found)"
+    ]
+  },
+  "generation_mode": "offline",
+  "counts": {
+    "concepts": 0,
+    "approved": 0,
+    "videos_ready": 0
+  },
+  "created_at": "2026-10-31T08:19:53.913366+00:00",
+  "updated_at": "2026-10-31T08:19:53.913380+00:00"
+}

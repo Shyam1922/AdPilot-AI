@@ -1,0 +1,51 @@
+[
+  {
+    "provider": "export",
+    "label": "Export (ZIP)",
+    "status": "working",
+    "notes": "Download approved copy (CSV), strategy and MP4s; upload them to any ad platform yourself.",
+    "docs_url": ""
+  },
+  {
+    "provider": "simulated",
+    "label": "Simulated metrics",
+    "status": "simulated",
+    "notes": "Sample performance data for demos. Always labelled 'simulated'; never real results.",
+    "docs_url": ""
+  },
+  {
+    "provider": "csv",
+    "label": "CSV import",
+    "status": "working",
+    "notes": "Upload real metrics exported from any ad platform (labelled 'imported_csv').",
+    "docs_url": ""
+  },
+  {
+    "provider": "google_ads",
+    "label": "Google Ads",
+    "status": "not_connected",
+    "notes": "For advertisers (not AdSense). Needs OAuth plus an approved developer token. Designed, not connected.",
+    "docs_url": "https://developers.google.com/google-ads/api/docs/start"
+  },
+  {
+    "provider": "meta_ads",
+    "label": "Meta Ads (Facebook + Instagram)",
+    "status": "not_connected",
+    "notes": "Needs a Meta app, a business ad account and app review for advanced access. Designed, not connected.",
+    "docs_url": "https://developers.facebook.com/docs/marketing-apis"
+  },
+  {
+    "provider": "amazon_ads",
+    "label": "Amazon Ads",
+    "status": "not_connected",
+    "notes": "Needs registration and approval with Amazon Ads; eligibility to be verified.",
+    "docs_url": "https://advertising.amazon.com/API/docs"
+  },
+  {
+    "provider": "instagram_publishing",
+    "label": "Instagram publishing",
+    "status": "not_connected",
+    "notes": "Needs a business/creator account linked to a Facebook Page plus app permissions.",
+    "docs_url": "https://developers.facebook.com/docs/instagram-platform"
+  }
+]

@@ -45,3 +45,14 @@ def strip_brand(name: str, brand: str) -> str:
     if brand and name.lower().startswith(brand.split()[0].lower() + " "):
         return name[len(brand.split()[0]) + 1:]
     return name
+
+
+def short_claim(text: str, limit: int = 42) -> str:
+    """Shorten a claim without cutting mid-idea: drop a trailing clause, else trim at a word."""
+    text = (text or "").strip().rstrip(".")
+    if len(text) <= limit:
+        return text
+    head = re.split(r"\s(?:that|which|with|for|and|so)\s", text, maxsplit=1)[0].rstrip(",;: ")
+    if 8 <= len(head) <= limit:
+        return head
+    return trim_words(text, limit)[0]

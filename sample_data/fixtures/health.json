@@ -1,0 +1,6 @@
+{
+  "status": "ok",
+  "llm_provider": "offline",
+  "ffmpeg": true,
+  "demo_store_url": "https://demo.adpilot.local/"
+}

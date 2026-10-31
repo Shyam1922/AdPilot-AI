@@ -1,0 +1,303 @@
+{
+  "id": 1,
+  "name": "Velvaa Skin",
+  "website": "https://demo.adpilot.local/",
+  "profile": {
+    "brand_name": "Velvaa Skin",
+    "product_name": "Velvaa Saffron Dew Serum",
+    "product_category": "skincare",
+    "description": "Velvaa Skin makes gentle, fragrance-free everyday skincare inspired by Indian kitchen ingredients like saffron and rice water. Made in India.",
+    "products": [
+      {
+        "name": "Velvaa Saffron Dew Serum",
+        "description": "Lightweight daily face serum with saffron extract and 5% niacinamide. Fragrance-free, non-sticky, absorbs quickly.",
+        "price": "₹899",
+        "image_url": "https://demo.adpilot.local/images/serum.png",
+        "features": [
+          "Size: 30 ml",
+          "Key ingredients: Saffron extract, 5% niacinamide"
+        ]
+      },
+      {
+        "name": "Velvaa Rice Water Gel Cleanser",
+        "description": "Soap-free gel cleanser with fermented rice water that cleans without leaving skin feeling tight.",
+        "price": "₹449",
+        "image_url": "https://demo.adpilot.local/images/cleanser.png",
+        "features": [
+          "Size: 100 ml",
+          "Key ingredients: Fermented rice water, aloe vera"
+        ]
+      },
+      {
+        "name": "Velvaa Sun-Kissed SPF 50 Fluid",
+        "description": "Broad-spectrum SPF 50 PA++++ sunscreen fluid with no white cast, made for humid Indian summers.",
+        "price": "₹699",
+        "image_url": "https://demo.adpilot.local/images/spf.png",
+        "features": [
+          "Size: 50 ml",
+          "Protection: SPF 50 PA++++"
+        ]
+      }
+    ],
+    "value_propositions": [
+      "Velvaa Skin makes gentle, fragrance-free everyday skincare inspired by Indian kitchen ingredients like saffron and rice water.",
+      "Lightweight, non-sticky texture that absorbs quickly",
+      "Fragrance-free and suitable for daily use",
+      "Soap-free gel with fermented rice water and aloe vera",
+      "Cleans without leaving skin feeling tight"
+    ],
+    "features": [
+      "Saffron extract with 5% niacinamide",
+      "Lightweight, non-sticky texture that absorbs quickly",
+      "Fragrance-free and suitable for daily use",
+      "Soap-free gel with fermented rice water and aloe vera",
+      "Cleans without leaving skin feeling tight",
+      "Broad-spectrum SPF 50 PA++++ protection",
+      "No white cast on Indian skin tones",
+      "Made for humid Indian summers"
+    ],
+    "audience_hypotheses": [
+      {
+        "segment": "People in hot, humid Indian cities",
+        "need": "Products that don't feel heavy or sticky in the heat",
+        "evidence": "s18: \"Made for humid Indian summers\"",
+        "confidence": "medium"
+      },
+      {
+        "segment": "Skincare beginners who want a short routine",
+        "need": "A simple routine that is easy to stick to",
+        "evidence": "s20: \"Velvaa started in a small Jaipur kitchen with one question: why do simple, familiar ingred\"",
+        "confidence": "medium"
+      },
+      {
+        "segment": "People who prefer fragrance-free, gentle products",
+        "need": "Avoiding added fragrance and harsh feel",
+        "evidence": "s1: \"Velvaa Skin makes gentle, fragrance-free everyday skincare inspired by Indian kitchen ingr\"",
+        "confidence": "medium"
+      },
+      {
+        "segment": "Shoppers who trust familiar Indian ingredients",
+        "need": "Ingredients they recognise from home",
+        "evidence": "s1: \"Velvaa Skin makes gentle, fragrance-free everyday skincare inspired by Indian kitchen ingr\"",
+        "confidence": "medium"
+      }
+    ],
+    "brand_tone": [
+      "rooted in India",
+      "modern",
+      "gentle",
+      "warm"
+    ],
+    "differentiators": [
+      "Rooted in familiar Indian ingredients",
+      "Made in India",
+      "Fragrance-free formulas",
+      "Accessible pricing (₹449–₹899 on the site)",
+      "Openly says what is in each product"
+    ],
+    "approved_claims": [
+      {
+        "claim": "Saffron extract with 5% niacinamide",
+        "source": "s11"
+      },
+      {
+        "claim": "Lightweight, non-sticky texture that absorbs quickly",
+        "source": "s12"
+      },
+      {
+        "claim": "Fragrance-free and suitable for daily use",
+        "source": "s13"
+      },
+      {
+        "claim": "Soap-free gel with fermented rice water and aloe vera",
+        "source": "s14"
+      },
+      {
+        "claim": "Cleans without leaving skin feeling tight",
+        "source": "s15"
+      },
+      {
+        "claim": "Broad-spectrum SPF 50 PA++++ protection",
+        "source": "s16"
+      },
+      {
+        "claim": "No white cast on Indian skin tones",
+        "source": "s17"
+      },
+      {
+        "claim": "Made for humid Indian summers",
+        "source": "s18"
+      }
+    ],
+    "unknowns_to_confirm": [
+      "Any current offer or discount (none found on the site)",
+      "Customer reviews or ratings you are allowed to quote (none found)",
+      "Certification status: the site says it is still in progress",
+      "Confirm the target audience (current segments are hypotheses)"
+    ],
+    "visual_identity": {
+      "primary": "#C4782A",
+      "secondary": "#4A2816",
+      "accent": "#FAF4EA",
+      "style": [
+        "rooted in India",
+        "modern",
+        "gentle"
+      ],
+      "source": "theme-color + image colours"
+    },
+    "source_urls": [
+      "https://demo.adpilot.local/"
+    ]
+  },
+  "guardrails": {
+    "claims_to_avoid": [],
+    "words_to_avoid": [],
+    "notes": ""
+  },
+  "learnings": [],
+  "sources": [
+    {
+      "id": "s1",
+      "text": "Velvaa Skin makes gentle, fragrance-free everyday skincare inspired by Indian kitchen ingredients like saffron and rice water. Made in India.",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s2",
+      "text": "Everyday skincare, rooted in the Indian kitchen.",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s3",
+      "text": "The essentials",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s4",
+      "text": "Saffron Dew Serum",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s5",
+      "text": "Rice Water Gel Cleanser",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s6",
+      "text": "Sun-Kissed SPF 50 Fluid",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s7",
+      "text": "Our story",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s8",
+      "text": "FAQ",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s9",
+      "text": "Who is Velvaa for?",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s10",
+      "text": "Is Velvaa cruelty-free?",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s11",
+      "text": "Saffron extract with 5% niacinamide",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s12",
+      "text": "Lightweight, non-sticky texture that absorbs quickly",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s13",
+      "text": "Fragrance-free and suitable for daily use",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s14",
+      "text": "Soap-free gel with fermented rice water and aloe vera",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s15",
+      "text": "Cleans without leaving skin feeling tight",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s16",
+      "text": "Broad-spectrum SPF 50 PA++++ protection",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s17",
+      "text": "No white cast on Indian skin tones",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s18",
+      "text": "Made for humid Indian summers",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s19",
+      "text": "Velvaa makes gentle, fragrance-free essentials inspired by ingredients our grandmothers trusted, like saffron and rice water, reformulated for modern routines and humid Indian weather.",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s20",
+      "text": "Velvaa started in a small Jaipur kitchen with one question: why do simple, familiar ingredients feel so hard to find in modern skincare? Every Velvaa product is made in India, free from added fragrance, and designed to fit into a three-step routine you'll actually keep.",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s21",
+      "text": "We're a small team, and we'd rather tell you exactly what's in the bottle than make promises skin can't keep.",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s22",
+      "text": "Anyone who wants a short, gentle routine, especially if you live somewhere hot and humid and dislike heavy, sticky products.",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "s23",
+      "text": "We are currently working on third-party certification and will share details once it is complete.",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "p1",
+      "text": "Velvaa Saffron Dew Serum Lightweight daily face serum with saffron extract and 5% niacinamide. Fragrance-free, non-sticky, absorbs quickly. Size: 30 ml Key ingredients: Saffron extract, 5% niacinamide Price ₹899",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "p2",
+      "text": "Velvaa Rice Water Gel Cleanser Soap-free gel cleanser with fermented rice water that cleans without leaving skin feeling tight. Size: 100 ml Key ingredients: Fermented rice water, aloe vera Price ₹449",
+      "url": "https://demo.adpilot.local/"
+    },
+    {
+      "id": "p3",
+      "text": "Velvaa Sun-Kissed SPF 50 Fluid Broad-spectrum SPF 50 PA++++ sunscreen fluid with no white cast, made for humid Indian summers. Size: 50 ml Protection: SPF 50 PA++++ Price ₹699",
+      "url": "https://demo.adpilot.local/"
+    }
+  ],
+  "warnings": [
+    "Ignored 1 hidden element(s) on the page."
+  ],
+  "logo_url": "/files/brand_1/logo.png",
+  "product_image_urls": [
+    "/files/brand_1/product_1.png",
+    "/files/brand_1/product_2.png",
+    "/files/brand_1/product_3.png"
+  ],
+  "generation_mode": "offline",
+  "created_at": "2026-10-31T08:19:53.738268+00:00",
+  "updated_at": "2026-10-31T08:19:53.899303+00:00"
+}

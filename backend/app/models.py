@@ -36,6 +36,8 @@ class Brand(SQLModel, table=True):
     sources: list[Any] = _json(list)           # source urls + snippets
     warnings: list[Any] = _json(list)
     logo_path: str = ""
+    product_images: list[Any] = _json(list)  # local paths of downloaded / uploaded product images
+    integrations: dict[str, Any] = _json()     # e.g. {"meko": {"datapack_id", "status", "synced_at", ...}}
     generation_mode: str = "offline"
     created_at: datetime = Field(default_factory=now)
     updated_at: datetime = Field(default_factory=now)
@@ -87,7 +89,7 @@ class Concept(SQLModel, table=True):
 
 class Asset(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    campaign_id: Optional[int] = Field(default=None, foreign_key="campaign.id", index=True)
     concept_id: Optional[int] = Field(default=None, index=True)
     brand_id: Optional[int] = Field(default=None, index=True)
     kind: str            # image | video | upload
