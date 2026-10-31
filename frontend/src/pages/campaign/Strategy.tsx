@@ -3,6 +3,7 @@ import { ArrowRight, X } from "lucide-react";
 import { Card, Chip, ModeBadge } from "@/components/ui";
 import GenerateConcepts from "@/components/GenerateConcepts";
 import { useCampaign } from "../Campaign";
+import { channelLabel } from "../Campaigns";
 
 export default function Strategy() {
   const { detail, base } = useCampaign();
@@ -49,7 +50,7 @@ export default function Strategy() {
             {s.channel_plan.map((c) => (
               <div key={c.channel} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-medium text-ink">{c.channel}</p>
+                  <p className="font-medium text-ink">{channelLabel(c.channel)}</p>
                   <p className="text-xs text-muted">{c.formats.join(" · ")}</p>
                 </div>
                 <p className="mt-0.5 text-sm text-muted">{c.role}</p>
@@ -65,7 +66,7 @@ export default function Strategy() {
             {s.content_calendar.map((d) => (
               <div key={`${d.day}-${d.channel}`} className="rounded-lg bg-white/[0.03] p-3 ring-1 ring-white/5">
                 <p className="text-xs font-semibold text-brand-300">Day {d.day}</p>
-                <p className="mt-1 text-xs text-muted">{d.channel}</p>
+                <p className="mt-1 text-xs text-muted">{channelLabel(d.channel)}</p>
                 <p className="mt-2 text-sm leading-snug text-ink/90">{d.content}</p>
               </div>
             ))}

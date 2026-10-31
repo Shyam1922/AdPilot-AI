@@ -44,6 +44,10 @@ async function send(path: string, init: RequestInit = {}): Promise<Response> {
     } catch {
       /* non-JSON error body */
     }
+    // FastAPI's bare "Not Found" / "Method Not Allowed" means the route itself doesn't exist yet.
+    if ((res.status === 404 && detail === "Not Found") || res.status === 405) {
+      detail = "This feature isn't available on the backend yet.";
+    }
     throw new ApiError(res.status, detail);
   }
   return res;
@@ -82,7 +86,7 @@ export const api = {
   analyzeBrand: (body: AnalyzeBrandBody) => request<Brand>("/api/brands/analyze", json("POST", body)),
   updateBrand: (id: number, patch: BrandUpdate) => request<Brand>(`/api/brands/${id}`, json("PATCH", patch)),
   uploadBrandFile: (id: number, file: File, role: "logo" | "product") =>
-    request<Asset>(`/api/brands/${id}/uploads`, multipart({ file, role })),
+    request<Brand>(`/api/brands/${id}/uploads`, multipart({ file, role })),
 
   // Strategist + Campaign Management
   listCampaigns: (brandId: number) => request<Campaign[]>(`/api/campaigns?brand_id=${brandId}`),

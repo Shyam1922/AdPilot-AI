@@ -51,10 +51,10 @@ export default function BrandMemory() {
       {p.products.length > 0 && (
         <Card title={`Products · ${p.products.length}`}>
           <div className="grid grid-cols-3 gap-4">
-            {p.products.map((prod) => (
+            {p.products.map((prod, i) => (
               <div key={prod.name} className="rounded-xl bg-white/[0.03] p-4 ring-1 ring-white/5">
                 <div className="flex items-center gap-3">
-                  {prod.image_url && <img src={fileUrl(prod.image_url)} alt="" className="h-14 w-14 rounded-lg bg-white object-contain p-1" />}
+                  <ProductImage brand={brand} index={i} />
                   <div className="min-w-0">
                     <p className="font-medium text-ink">{prod.name}</p>
                     {prod.price && <p className="text-sm text-brand-300">{prod.price}</p>}
@@ -221,19 +221,24 @@ function ApprovedClaims({ brand }: { brand: Brand }) {
   );
 }
 
+/** Unknowns are open questions, not facts: answer one with a fact (saved as a user-provided claim) or dismiss it. */
 function Unknowns({ brand }: { brand: Brand }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const confirm = useMutation({
-    mutationFn: (text: string) => {
+  const [answering, setAnswering] = useState<string | null>(null);
+  const [fact, setFact] = useState("");
+  const resolve = useMutation({
+    mutationFn: ({ unknown, claim }: { unknown: string; claim?: string }) => {
       const profile = structuredClone(brand.profile);
-      profile.approved_claims.push({ claim: text, source: "user-provided" });
-      profile.unknowns_to_confirm = profile.unknowns_to_confirm.filter((u) => u !== text);
+      if (claim) profile.approved_claims.push({ claim, source: "user-provided" });
+      profile.unknowns_to_confirm = profile.unknowns_to_confirm.filter((u) => u !== unknown);
       return api.updateBrand(brand.id, { profile });
     },
-    onSuccess: (b) => {
+    onSuccess: (b, { claim }) => {
       qc.setQueryData(["brand", brand.id], b);
-      toast.success("Added to approved claims");
+      setAnswering(null);
+      setFact("");
+      toast.success(claim ? "Added to approved claims" : "Dismissed");
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
@@ -242,19 +247,52 @@ function Unknowns({ brand }: { brand: Brand }) {
   return (
     <Card title={`To confirm · ${items.length}`}>
       {items.length === 0 ? (
-        <p className="text-sm text-muted">Nothing to confirm. Every claim in use has a source.</p>
+        <p className="text-sm text-muted">Nothing open. Every claim in use has a source.</p>
       ) : (
         <ul className="space-y-2">
           {items.map((u) => (
-            <li key={u} className="flex items-center justify-between gap-3 rounded-lg bg-amber-400/5 px-3 py-2.5 ring-1 ring-amber-400/15">
-              <span className="text-sm text-amber-100/90">{u}</span>
-              <button
-                className="shrink-0 text-xs font-medium text-brand-300 hover:text-white disabled:opacity-50"
-                disabled={confirm.isPending}
-                onClick={() => confirm.mutate(u)}
-              >
-                {confirm.isPending && confirm.variables === u ? "Saving…" : "Confirm as true"}
-              </button>
+            <li key={u} className="rounded-lg bg-amber-400/5 px-3 py-2.5 ring-1 ring-amber-400/15">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-sm text-amber-100/90">{u}</span>
+                {answering !== u && (
+                  <span className="flex shrink-0 items-center gap-3 text-xs">
+                    <button className="font-medium text-brand-300 hover:text-white" onClick={() => { setAnswering(u); setFact(""); }}>
+                      Add fact
+                    </button>
+                    <button
+                      className="text-muted hover:text-ink disabled:opacity-50"
+                      disabled={resolve.isPending}
+                      onClick={() => resolve.mutate({ unknown: u })}
+                    >
+                      Dismiss
+                    </button>
+                  </span>
+                )}
+              </div>
+              {answering === u && (
+                <form
+                  className="mt-2.5 flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (fact.trim()) resolve.mutate({ unknown: u, claim: fact.trim() });
+                  }}
+                >
+                  <input
+                    className="input py-1.5"
+                    placeholder="State the fact as it may appear in ads"
+                    value={fact}
+                    onChange={(e) => setFact(e.target.value)}
+                    onKeyDown={(e) => e.key === "Escape" && setAnswering(null)}
+                    autoFocus
+                  />
+                  <button type="submit" className="btn-primary shrink-0 px-3 py-1.5 text-xs" disabled={!fact.trim() || resolve.isPending}>
+                    {resolve.isPending ? <Spinner className="h-3.5 w-3.5" /> : "Save"}
+                  </button>
+                  <button type="button" className="shrink-0 text-xs text-muted hover:text-ink" onClick={() => setAnswering(null)}>
+                    Cancel
+                  </button>
+                </form>
+              )}
             </li>
           ))}
         </ul>
@@ -373,6 +411,27 @@ function Learnings({ brand }: { brand: Brand }) {
         </ul>
       )}
     </Card>
+  );
+}
+
+/**
+ * The backend downloads product images as storage/brand_{id}/product_{n}.* in the order of
+ * products that have an image_url; `image_url` itself stays the original site URL.
+ */
+function ProductImage({ brand, index }: { brand: Brand; index: number }) {
+  const [failed, setFailed] = useState(false);
+  const products = brand.profile.products;
+  const own = products[index].image_url;
+  if (!own || failed) return null;
+  const n = products.slice(0, index).filter((p) => p.image_url).length + 1;
+  const local = brand.product_image_urls.find((u) => new RegExp(`/product_${n}\\.\\w+$`).test(u));
+  return (
+    <img
+      src={fileUrl(local ?? own)}
+      onError={() => setFailed(true)}
+      alt=""
+      className="h-14 w-14 shrink-0 rounded-lg bg-white object-contain p-1"
+    />
   );
 }
 

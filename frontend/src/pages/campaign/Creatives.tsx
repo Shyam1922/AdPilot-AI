@@ -71,7 +71,9 @@ export default function Creatives() {
 }
 
 function ConceptRow({ concept, active, onClick }: { concept: Concept; active: boolean; onClick: () => void }) {
-  const blocking = concept.risk_flags.filter((f) => f.severity !== "info").length;
+  const flagged = concept.risk_flags.filter((f) => f.severity !== "info");
+  const blocking = flagged.length;
+  const blocked = flagged.some((f) => f.severity === "block");
   return (
     <button
       onClick={onClick}
@@ -97,7 +99,7 @@ function ConceptRow({ concept, active, onClick }: { concept: Concept; active: bo
       {(blocking > 0 || concept.latest_video?.status === "ready") && (
         <div className="mt-1.5 flex items-center gap-3 text-[11px]">
           {blocking > 0 && (
-            <span className="inline-flex items-center gap-1 text-amber-300">
+            <span className={cn("inline-flex items-center gap-1", blocked ? "text-rose-300" : "text-amber-300")} title={blocked ? "Blocking: edit before approving" : "Warnings"}>
               <AlertTriangle className="h-3 w-3" /> {blocking}
             </span>
           )}

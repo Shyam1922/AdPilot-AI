@@ -17,7 +17,7 @@ const STEPS: { key: CampaignStatus; label: string }[] = [
 ];
 
 const INTEGRATION: Record<IntegrationStatus["status"], { label: string; cls: string }> = {
-  working: { label: "Connected", cls: "text-success" },
+  working: { label: "Working", cls: "text-success" },
   export_only: { label: "Export only", cls: "text-sky-300" },
   simulated: { label: "Simulated", cls: "text-amber-300" },
   not_connected: { label: "Not connected", cls: "text-muted" },
@@ -99,8 +99,8 @@ export default function Launch() {
                 <li key={x.id} className="flex items-center justify-between gap-4 py-3 first:pt-0">
                   <Link to={`${base}/creatives?c=${x.id}`} className="min-w-0 hover:text-brand-300">
                     <p className="truncate text-sm text-ink">{x.headline || x.hook}</p>
-                    <p className="text-xs capitalize text-muted">
-                      {x.concept_type} · {x.target_segment}
+                    <p className="text-xs text-muted">
+                      <span className="capitalize">{x.concept_type}</span> · {x.target_segment}
                     </p>
                   </Link>
                   <span className={cn("shrink-0 text-xs", x.latest_video?.status === "ready" ? "text-success" : "text-muted")}>

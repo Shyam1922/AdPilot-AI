@@ -22,7 +22,9 @@ export const CHANNELS: { key: string; label: string }[] = [
   { key: "google_ads", label: "Google Ads" },
 ];
 
-export const channelLabel = (c: string) => CHANNELS.find((x) => x.key === c)?.label ?? c;
+/** The backend uses channel keys (instagram, meta_ads, …); show readable names. */
+export const channelLabel = (c: string) =>
+  CHANNELS.find((x) => x.key === c.toLowerCase())?.label ?? c.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
 
 export default function Campaigns() {
   const { brandId } = useParams();
