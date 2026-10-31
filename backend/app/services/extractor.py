@@ -10,10 +10,13 @@ Safety:
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import ipaddress
 import json
 import re
 import socket
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -103,12 +106,46 @@ def _demo_path(url: str) -> Path:
     return p
 
 
+# Pages we already read are kept for a few hours, so re-analysing a brand (or a demo rehearsal) doesn't hit the
+# site again: rate limits (HTTP 429) are the most common reason a site that worked suddenly refuses.
+_CACHE_DIR = settings.storage_dir.parent / ".fetch_cache"
+_CACHE_TTL_S = 6 * 3600
+
+
+def _cache_key(url: str, accept: str) -> Path:
+    return _CACHE_DIR / (hashlib.sha256(f"{url}|{accept}".encode()).hexdigest()[:40] + ".json")
+
+
+def _cache_read(url: str, accept: str):
+    try:
+        f = _cache_key(url, accept)
+        if not f.exists() or time.time() - f.stat().st_mtime > _CACHE_TTL_S:
+            return None
+        d = json.loads(f.read_text())
+        return base64.b64decode(d["body"]), d["ctype"], d["final"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def _cache_write(url: str, accept: str, result) -> None:
+    try:
+        _CACHE_DIR.mkdir(exist_ok=True)
+        body, ctype, final = result
+        _cache_key(url, accept).write_text(json.dumps({"body": base64.b64encode(body).decode(), "ctype": ctype, "final": final}))
+    except OSError:
+        pass
+
+
 def safe_get(url: str, max_bytes: int, accept: str = "text/html,*/*") -> tuple[bytes, str, str]:
     """GET with manual redirect handling so every hop is re-validated. Returns (body, content_type, final_url)."""
     if _is_demo(url):
         p = _demo_path(url)
         ctype = "text/html" if p.suffix == ".html" else f"image/{p.suffix.lstrip('.')}"
         return p.read_bytes()[:max_bytes], ctype, url
+
+    cached = _cache_read(url, accept)
+    if cached:
+        return cached
 
     current = url
     with httpx.Client(timeout=settings.fetch_timeout_s, follow_redirects=False,
@@ -119,6 +156,10 @@ def safe_get(url: str, max_bytes: int, accept: str = "text/html,*/*") -> tuple[b
                 if resp.is_redirect:
                     current = urljoin(current, resp.headers.get("location", ""))
                     continue
+                if resp.status_code in (401, 403, 406, 429, 503):
+                    raise ExtractionError(
+                        f"This site doesn't allow automated readers (HTTP {resp.status_code}), so AdPilot can't "
+                        "read it. Enter the brand details manually instead.")
                 if resp.status_code >= 400:
                     raise ExtractionError(f"Site returned HTTP {resp.status_code}.")
                 declared = int(resp.headers.get("content-length") or 0)
@@ -130,7 +171,9 @@ def safe_get(url: str, max_bytes: int, accept: str = "text/html,*/*") -> tuple[b
                     if size > max_bytes:
                         raise ExtractionError("Response too large.")
                     chunks.append(chunk)
-                return b"".join(chunks), resp.headers.get("content-type", ""), str(resp.url)
+                result = b"".join(chunks), resp.headers.get("content-type", ""), str(resp.url)
+                _cache_write(url, accept, result)
+                return result
     raise ExtractionError("Too many redirects.")
 
 

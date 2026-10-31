@@ -334,6 +334,48 @@ The Integrations page shows exactly these statuses.
 | `adpilot-creative-agent` | Before and after generating concepts | `conversation_create` → `context_search` (past learnings fed into the Gemini prompt) → `conversation_add_message` (what was generated and the plan it followed) |
 | `adpilot-analyst-agent` | After optimization (G3) | `memory_add` (what worked, labelled with its data source) → `memory_promote` (shared with all agents) |
 
+### How AdPilot uses Meko (agents and memory)
+
+AdPilot is built as three small agents that never call each other directly. They cooperate **through one shared Meko datapack per brand**: what one agent writes, another reads later.
+
+```mermaid
+flowchart LR
+  subgraph Agents
+    B[adpilot-brand-agent]
+    C[adpilot-creative-agent]
+    A[adpilot-analyst-agent]
+  end
+  subgraph Meko[Meko · one datapack per brand]
+    F[(brand facts<br/>products · approved claims · tone · unknowns)]
+    L[(learnings<br/>what worked, with its data source)]
+    P[(posting patterns<br/>best times · what content works)]
+    T[(conversation traces<br/>request · output · plan)]
+  end
+  Site[Website / manual facts] --> B
+  B -- memory_add --> F
+  C -- context_search before writing ads and posts --> F & L & P
+  C -- conversation_add_message --> T
+  R[Results: ad metrics, post engagement] --> A
+  A -- memory_add + memory_promote --> L
+  A -- memory_add --> P
+  L -. read in the next campaign .-> C
+  P -. read in the next campaign .-> C
+```
+
+| Agent | Writes | Reads | When |
+|---|---|---|---|
+| `adpilot-brand-agent` | Brand facts, approved claims, tone, unknowns (`memory_add`) | | After a brand is analysed or edited |
+| `adpilot-creative-agent` | A trace of each generation (`conversation_add_message`) | `context_search` over facts, learnings and posting patterns | Before and after writing ad concepts and social posts |
+| `adpilot-analyst-agent` | Optimization learnings and posting patterns (`memory_add`), promoted with `memory_promote` so every agent sees them | | After a metrics iteration, and when posting patterns change |
+
+**The loop that makes it learn:** results come in → the analyst turns them into learnings and posting patterns → they are promoted into the brand's shared memory → the creative agent finds them with `context_search` the next time it writes. The Meko card on the Performance page shows what is stored (counts per kind) and runs a live "what Meko recalls" search.
+
+**Why this architecture**
+- **One datapack per brand** keeps brands from mixing. Each brand's tone, claims and audience habits stay separate (Velvaa, Brew & Bloom and Threadline learn different posting times).
+- **Agents share memory, not code paths.** Each agent has one job and one identity in Meko, so the memory trace shows who wrote what. New agents can be added without touching the others.
+- **Meko is additive, not load-bearing.** Calls run as background jobs with timeouts and one retry. If Meko is unreachable the app keeps working on local Brand Memory and says "Not connected"; it never pretends.
+- **Honest data.** Every memory records its source (for example `synthetic_history` or `simulated`), so demo data is never mistaken for real results.
+
 How it's built:
 - `backend/app/services/meko_memory.py` speaks MCP's streamable-HTTP protocol directly with `httpx` (no SDK dependency, because the `mcp` package's client API changed between v1 and v2).
 - `backend/app/services/meko_sync.py` runs the syncs as background jobs, so Meko never slows the UI. The result is stored in `brand.integrations.meko` (`status`, `datapack_id`, `conversations`, …).

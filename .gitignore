@@ -12,3 +12,4 @@ backend/.env
 frontend/.env
 
 backend/.meko_datapacks.json
+backend/.fetch_cache/

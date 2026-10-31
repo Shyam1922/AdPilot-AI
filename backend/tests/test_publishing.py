@@ -103,3 +103,4 @@ def test_connect_socials(client):
     assert client.put(f"{base}/x", json={"handle_or_url": "bad handle!!"}).status_code == 422
     left = client.delete(f"{base}/x").json()
     assert [s["connected"] for s in left] == [True, True, False] or sum(s["connected"] for s in left) == 2
+
