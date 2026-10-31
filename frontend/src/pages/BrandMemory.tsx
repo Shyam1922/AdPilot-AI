@@ -1,17 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, ExternalLink, ImagePlus, Plus, X } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api, errorMessage, fileUrl } from "@/lib/api";
+import { useSupports, useTitle } from "@/lib/hooks";
 import { useToast } from "@/components/toast";
-import { Card, Chip, EmptyState, ErrorState, ModeBadge, PageHeader, Skeleton, SourceBadge, Spinner } from "@/components/ui";
+import {
+  Card,
+  Chip,
+  ConfirmDialog,
+  EditableTitle,
+  EmptyState,
+  ErrorState,
+  Field,
+  ModeBadge,
+  PageHeader,
+  Skeleton,
+  SourceBadge,
+  Spinner,
+} from "@/components/ui";
 import { cn } from "@/lib/format";
-import type { Brand } from "@/lib/types";
+import type { Brand, BrandProfile, ProductInfo } from "@/lib/types";
 
 export default function BrandMemory() {
   const { brandId } = useParams();
   const id = Number(brandId);
   const { data: brand, isLoading, error, refetch } = useQuery({ queryKey: ["brand", id], queryFn: () => api.getBrand(id) });
+  useTitle(brand?.name);
 
   if (isLoading) return <BrandSkeleton />;
   if (error || !brand) return <ErrorState error={error} onRetry={() => refetch()} />;
@@ -32,50 +47,15 @@ export default function BrandMemory() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-6">
-        <Card title="About" className="col-span-2">
-          <p className="leading-relaxed text-ink/90">{p.description || "No description extracted."}</p>
-          {p.brand_tone.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-2">
-              {p.brand_tone.map((t) => (
-                <Chip key={t}>{t}</Chip>
-              ))}
-            </div>
-          )}
-        </Card>
-        <Card title="Value propositions">
-          <List items={p.value_propositions} empty="None extracted." />
-        </Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <About brand={brand} className="lg:col-span-2" />
+        <ListCard brand={brand} field="value_propositions" title="Value propositions" />
       </div>
 
-      {p.products.length > 0 && (
-        <Card title={`Products · ${p.products.length}`}>
-          <div className="grid grid-cols-3 gap-4">
-            {p.products.map((prod, i) => (
-              <div key={prod.name} className="rounded-xl bg-surface-2 p-4">
-                <div className="flex items-center gap-3">
-                  <ProductImage brand={brand} index={i} />
-                  <div className="min-w-0">
-                    <p className="font-medium text-ink">{prod.name}</p>
-                    {prod.price && <p className="text-sm text-white">{prod.price}</p>}
-                  </div>
-                </div>
-                {prod.description && <p className="mt-3 text-sm text-muted">{prod.description}</p>}
-                {prod.features.length > 0 && (
-                  <ul className="mt-3 space-y-1 text-sm text-ink/80">
-                    {prod.features.map((f) => (
-                      <li key={f}>· {f}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <Products brand={brand} />
 
-      <div className="grid grid-cols-3 gap-6">
-        <Card title="Audience hypotheses" className="col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card title="Audience hypotheses" className="lg:col-span-2">
           {p.audience_hypotheses.length === 0 ? (
             <p className="text-sm text-muted">None yet.</p>
           ) : (
@@ -86,7 +66,7 @@ export default function BrandMemory() {
                     <p className="font-medium text-ink">{a.segment}</p>
                     <span
                       className={cn(
-                        "text-xs capitalize",
+                        "shrink-0 text-xs capitalize",
                         a.confidence === "high" ? "text-success" : a.confidence === "medium" ? "text-warn" : "text-muted",
                       )}
                     >
@@ -100,20 +80,20 @@ export default function BrandMemory() {
             </div>
           )}
         </Card>
-        <Card title="Differentiators">
-          <List items={p.differentiators} empty="None extracted." />
-        </Card>
+        <ListCard brand={brand} field="differentiators" title="Differentiators" />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <ApprovedClaims brand={brand} />
         <Unknowns brand={brand} />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Guardrails brand={brand} />
         <Learnings brand={brand} />
       </div>
+
+      <DeleteBrand brand={brand} />
     </div>
   );
 }
@@ -131,30 +111,46 @@ function Header({ brand }: { brand: Brand }) {
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
+  // The name lives on the brand and in the profile (videos and copy read the profile), so keep both in step.
+  const rename = useMutation({
+    mutationFn: (name: string) => api.updateBrand(brand.id, { name, profile: { ...brand.profile, brand_name: name } }),
+    onSuccess: (b) => {
+      qc.setQueryData(["brand", brand.id], b);
+      qc.invalidateQueries({ queryKey: ["brands"] });
+      toast.success("Brand renamed");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
   const vi = brand.profile.visual_identity;
   const swatches = [vi.primary, vi.secondary, vi.accent].filter(Boolean) as string[];
 
   return (
     <PageHeader
       title={
-        <span className="flex items-center gap-4">
+        <span className="flex min-w-0 items-center gap-4">
           {brand.logo_url ? (
-            <img src={fileUrl(brand.logo_url)} alt="" className="h-12 w-12 rounded-xl bg-white object-contain p-1.5" />
+            <img src={fileUrl(brand.logo_url)} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-white object-contain p-1.5" />
           ) : (
             <button
               onClick={() => input.current?.click()}
               disabled={upload.isPending}
               title="Upload logo"
-              className="flex h-12 w-12 items-center justify-center rounded-xl border border-dashed border-line text-muted transition hover:border-white/40 hover:text-white"
+              aria-label="Upload logo"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dashed border-line text-muted transition hover:border-white/40 hover:text-white"
             >
               {upload.isPending ? <Spinner /> : <ImagePlus className="h-5 w-5" />}
             </button>
           )}
-          {brand.name}
+          <EditableTitle
+            value={rename.isPending && rename.variables ? rename.variables : brand.name}
+            label="Rename brand"
+            saving={rename.isPending}
+            onSave={(v) => rename.mutate(v)}
+          />
         </span>
       }
       subtitle={
-        <span className="flex items-center gap-3">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {brand.website && (
             <a href={brand.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-ink">
               {brand.website.replace(/^https?:\/\//, "").replace(/\/$/, "")} <ExternalLink className="h-3 w-3" />
@@ -183,6 +179,358 @@ function Header({ brand }: { brand: Brand }) {
         </>
       }
     />
+  );
+}
+
+/* --------------------------- editing Brand Memory --------------------------- */
+
+/** PATCH a modified copy of the profile; the backend validates and stores it whole. */
+function useProfileSave(brand: Brand, done: string, onDone: () => void) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (edit: (p: BrandProfile) => void) => {
+      const profile = structuredClone(brand.profile);
+      edit(profile);
+      return api.updateBrand(brand.id, { profile });
+    },
+    onSuccess: (b) => {
+      qc.setQueryData(["brand", brand.id], b);
+      qc.invalidateQueries({ queryKey: ["brands"] });
+      toast.success(done);
+      onDone();
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+}
+
+const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
+
+function EditActions({ editing, saving, canSave = true, onEdit, onCancel, onSave }: {
+  editing: boolean;
+  saving: boolean;
+  canSave?: boolean;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  if (!editing)
+    return (
+      <button onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs text-muted transition hover:text-white">
+        <Pencil className="h-3.5 w-3.5" /> Edit
+      </button>
+    );
+  return (
+    <span className="flex items-center gap-2">
+      <button className="btn-ghost h-7 rounded-lg px-3 text-xs" onClick={onCancel} disabled={saving}>
+        Cancel
+      </button>
+      <button className="btn-primary h-7 rounded-lg px-3 text-xs" onClick={onSave} disabled={saving || !canSave}>
+        {saving && <Spinner className="h-3.5 w-3.5" />} Save
+      </button>
+    </span>
+  );
+}
+
+function About({ brand, className }: { brand: Brand; className?: string }) {
+  const p = brand.profile;
+  const [editing, setEditing] = useState(false);
+  const [description, setDescription] = useState(p.description);
+  const [tone, setTone] = useState(p.brand_tone);
+  const save = useProfileSave(brand, "About saved", () => setEditing(false));
+  const start = () => {
+    setDescription(p.description);
+    setTone(p.brand_tone);
+    setEditing(true);
+  };
+
+  return (
+    <Card
+      title="About"
+      className={className}
+      action={
+        <EditActions
+          editing={editing}
+          saving={save.isPending}
+          onEdit={start}
+          onCancel={() => setEditing(false)}
+          onSave={() =>
+            save.mutate((x) => {
+              x.description = description.trim();
+              x.brand_tone = tone;
+            })
+          }
+        />
+      }
+    >
+      {editing ? (
+        <div className="space-y-5">
+          <Field label="Description">
+            <textarea className="input min-h-[96px] resize-y" value={description} onChange={(e) => setDescription(e.target.value)} autoFocus />
+          </Field>
+          <TagEditor label="Tone" items={tone} onChange={setTone} />
+        </div>
+      ) : (
+        <>
+          <p className="leading-relaxed text-ink/90">{p.description || "No description extracted."}</p>
+          {p.brand_tone.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {p.brand_tone.map((t) => (
+                <Chip key={t}>{t}</Chip>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
+function ListCard({ brand, field, title }: { brand: Brand; field: "value_propositions" | "differentiators"; title: string }) {
+  const items = brand.profile[field];
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const save = useProfileSave(brand, `${title} saved`, () => setEditing(false));
+
+  return (
+    <Card
+      title={title}
+      action={
+        <EditActions
+          editing={editing}
+          saving={save.isPending}
+          onEdit={() => {
+            setText(items.join("\n"));
+            setEditing(true);
+          }}
+          onCancel={() => setEditing(false)}
+          onSave={() =>
+            save.mutate((x) => {
+              x[field] = lines(text);
+            })
+          }
+        />
+      }
+    >
+      {editing ? (
+        <Field label="One per line">
+          <textarea className="input min-h-[160px] resize-y" value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+        </Field>
+      ) : (
+        <List items={items} empty="None extracted." />
+      )}
+    </Card>
+  );
+}
+
+type ProductDraft = Omit<ProductInfo, "features" | "price"> & { price: string; features: string; added?: boolean };
+
+const toDraft = (p: ProductInfo): ProductDraft => ({ ...p, price: p.price ?? "", features: p.features.join("\n") });
+
+function Products({ brand }: { brand: Brand }) {
+  const products = brand.profile.products;
+  const [editing, setEditing] = useState(false);
+  const [drafts, setDrafts] = useState<ProductDraft[]>([]);
+  const save = useProfileSave(brand, "Products saved", () => setEditing(false));
+
+  // Downloaded images (product_N) and videos are matched to products by position, so existing
+  // products keep their order and can't be removed here; only trailing products without an image can.
+  const lastWithImage = drafts.reduce((last, d, i) => (d.image_url ? i : last), -1);
+  const removable = (i: number) => i > lastWithImage && !drafts[i].image_url;
+  const set = (i: number, patch: Partial<ProductDraft>) => setDrafts((ds) => ds.map((d, j) => (j === i ? { ...d, ...patch } : d)));
+  const valid = drafts.every((d) => d.name.trim());
+
+  return (
+    <Card
+      title={`Products · ${products.length}`}
+      action={
+        <EditActions
+          editing={editing}
+          saving={save.isPending}
+          canSave={valid}
+          onEdit={() => {
+            setDrafts(products.map(toDraft));
+            setEditing(true);
+          }}
+          onCancel={() => setEditing(false)}
+          onSave={() =>
+            save.mutate((x) => {
+              x.products = drafts.map(({ added: _added, ...d }) => ({
+                ...d,
+                name: d.name.trim(),
+                description: d.description.trim(),
+                price: d.price.trim() || null,
+                features: lines(d.features),
+              }));
+            })
+          }
+        />
+      }
+    >
+      {editing ? (
+        <div className="space-y-4">
+          {drafts.map((d, i) => (
+            <div key={i} className="grid gap-4 rounded-xl bg-surface-2 p-4 sm:grid-cols-2">
+              <Field label="Name">
+                <input className="input" value={d.name} onChange={(e) => set(i, { name: e.target.value })} autoFocus={d.added} />
+              </Field>
+              <Field label="Price" hint="Leave empty if the site doesn't state one.">
+                <input className="input" value={d.price} onChange={(e) => set(i, { price: e.target.value })} />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Description">
+                  <textarea className="input min-h-[64px] resize-y" value={d.description} onChange={(e) => set(i, { description: e.target.value })} />
+                </Field>
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Features" hint="One per line">
+                  <textarea className="input min-h-[80px] resize-y" value={d.features} onChange={(e) => set(i, { features: e.target.value })} />
+                </Field>
+              </div>
+              {removable(i) && (
+                <button
+                  className="inline-flex items-center gap-1.5 justify-self-start text-xs text-muted transition hover:text-danger"
+                  onClick={() => setDrafts((ds) => ds.filter((_, j) => j !== i))}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Remove product
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            className="btn-ghost"
+            onClick={() => setDrafts((ds) => [...ds, { name: "", description: "", price: "", image_url: null, features: "", added: true }])}
+          >
+            <Plus className="h-4 w-4" /> Add product
+          </button>
+          {!valid && <p className="text-xs text-warn">Every product needs a name.</p>}
+        </div>
+      ) : products.length === 0 ? (
+        <p className="text-sm text-muted">No products yet. Add them so strategies and creatives can name them.</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {products.map((prod, i) => (
+            <div key={`${i}-${prod.name}`} className="rounded-xl bg-surface-2 p-4">
+              <div className="flex items-center gap-3">
+                <ProductImage brand={brand} index={i} />
+                <div className="min-w-0">
+                  <p className="font-medium text-ink">{prod.name}</p>
+                  {prod.price && <p className="text-sm text-white">{prod.price}</p>}
+                </div>
+              </div>
+              {prod.description && <p className="mt-3 text-sm text-muted">{prod.description}</p>}
+              {prod.features.length > 0 && (
+                <ul className="mt-3 space-y-1 text-sm text-ink/80">
+                  {prod.features.map((f) => (
+                    <li key={f}>· {f}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Photos brand={brand} />
+    </Card>
+  );
+}
+
+/** Every stored brand image. Uploads aren't tied to one product: the newest upload is used in all video ads. */
+function Photos({ brand }: { brand: Brand }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  const upload = useMutation({
+    mutationFn: (file: File) => api.uploadBrandFile(brand.id, file, "product"),
+    onSuccess: (b) => {
+      qc.setQueryData(["brand", brand.id], b);
+      toast.success("Photo uploaded");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const isUpload = (u: string) => /\/upload_\d+\.\w+$/.test(u);
+  const inVideos = brand.product_image_urls.find(isUpload);
+
+  return (
+    <div className="mt-6 border-t border-line pt-5">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-medium text-white">Photos</p>
+        <p className="text-xs text-muted">
+          {inVideos ? "The newest upload is used in every video ad." : "Upload a photo to use it in every video ad."}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {brand.product_image_urls.map((u) => (
+          <figure key={u} className="relative">
+            <img src={fileUrl(u)} alt="" className="h-24 w-24 rounded-xl bg-white object-contain p-1.5" />
+            {u === inVideos && (
+              <figcaption className="absolute inset-x-1 bottom-1 rounded-md bg-black/75 px-1 py-0.5 text-center text-[10px] text-white">Used in videos</figcaption>
+            )}
+          </figure>
+        ))}
+        <button
+          onClick={() => input.current?.click()}
+          disabled={upload.isPending}
+          className="flex h-24 w-24 flex-col items-center justify-center gap-1.5 rounded-xl bg-raised text-xs text-muted transition hover:bg-[#2b2b2b] hover:text-white"
+        >
+          {upload.isPending ? <Spinner /> : <ImagePlus className="h-5 w-5" />}
+          Upload
+        </button>
+        <input
+          ref={input}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) upload.mutate(f);
+            e.target.value = "";
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Only rendered once the backend exposes DELETE /api/brands/{id}. */
+function DeleteBrand({ brand }: { brand: Brand }) {
+  const supported = useSupports("delete", "/api/brands/{id}");
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const remove = useMutation({
+    mutationFn: () => api.deleteBrand(brand.id),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ["brand", brand.id] });
+      qc.invalidateQueries({ queryKey: ["brands"] });
+      toast.success(`${brand.name} deleted`);
+      navigate("/");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  if (!supported) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
+      <div>
+        <p className="text-sm font-medium text-white">Delete brand</p>
+        <p className="text-sm text-muted">Removes its memory, campaigns, creatives and metrics.</p>
+      </div>
+      <button className="btn-danger" onClick={() => setOpen(true)}>
+        <Trash2 className="h-4 w-4" /> Delete brand
+      </button>
+      {open && (
+        <ConfirmDialog
+          title={`Delete ${brand.name}?`}
+          body="Its Brand Memory, campaigns, creatives, videos and metrics will be removed. This can't be undone."
+          confirmLabel="Delete"
+          pending={remove.isPending}
+          onConfirm={() => remove.mutate()}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </div>
   );
 }
 

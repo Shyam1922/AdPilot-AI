@@ -5,6 +5,7 @@ import { ArrowRight, Plus, X } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/format";
 import { EmptyState, ErrorState, Field, PageHeader, Skeleton, Spinner, StatusPill } from "@/components/ui";
+import { useTitle } from "@/lib/hooks";
 import type { Objective } from "@/lib/types";
 
 export const OBJECTIVES: { key: Objective; label: string; hint: string }[] = [
@@ -31,6 +32,7 @@ export default function Campaigns() {
   const id = Number(brandId);
   const [open, setOpen] = useState(false);
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ["campaigns", id], queryFn: () => api.listCampaigns(id) });
+  useTitle("Campaigns");
 
   return (
     <div>
@@ -69,7 +71,7 @@ export default function Campaigns() {
             <Link
               key={c.id}
               to={`/brands/${id}/campaigns/${c.id}`}
-              className="group flex items-center gap-6 border-b border-line bg-surface px-6 py-5 transition last:border-0 hover:bg-surface-2"
+              className="group flex items-center gap-4 border-b border-line bg-surface px-4 py-5 transition last:border-0 hover:bg-surface-2 sm:gap-6 sm:px-6"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-medium text-white">{c.name}</p>
@@ -77,7 +79,7 @@ export default function Campaigns() {
                   <span className="capitalize">{c.objective}</span> · {c.channels.map(channelLabel).join(", ")}
                 </p>
               </div>
-              <div className="text-right text-sm text-muted">
+              <div className="hidden text-right text-sm text-muted sm:block">
                 <p>
                   {c.counts.concepts} concepts · {c.counts.approved} approved
                 </p>
@@ -157,7 +159,7 @@ function NewCampaignDialog({ brandId, onClose }: { brandId: number; onClose: () 
 
           <div>
             <span className="label">Objective</span>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {OBJECTIVES.map((o) => (
                 <button
                   type="button"
@@ -205,7 +207,7 @@ function NewCampaignDialog({ brandId, onClose }: { brandId: number; onClose: () 
             </Field>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Audience note" hint="Optional">
               <input className="input" value={audience} onChange={(e) => setAudience(e.target.value)} />
             </Field>

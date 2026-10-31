@@ -1,9 +1,12 @@
-import { Link, NavLink, Outlet, useOutletContext, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Check } from "lucide-react";
-import { api } from "@/lib/api";
+import { Suspense, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Check, Trash2 } from "lucide-react";
+import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/format";
-import { ErrorState, Skeleton, StatusPill } from "@/components/ui";
+import { useSupports, useTitle } from "@/lib/hooks";
+import { useToast } from "@/components/toast";
+import { ConfirmDialog, EditableTitle, ErrorState, PageFallback, Skeleton, StatusPill } from "@/components/ui";
 import type { CampaignDetail } from "@/lib/types";
 import { channelLabel } from "./Campaigns";
 
@@ -30,11 +33,14 @@ export default function Campaign() {
   const id = Number(campaignId);
   const base = `/brands/${brandId}/campaigns/${id}`;
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ["campaign", id], queryFn: () => api.getCampaign(id) });
+  const { pathname } = useLocation();
+  const step = STEPS.find((s) => pathname.endsWith(`/${s.to}`));
+  useTitle(step?.label, data?.campaign.name);
 
   if (isLoading)
     return (
       <div className="space-y-6">
-        <Skeleton className="h-16 w-96" />
+        <Skeleton className="h-16 w-full max-w-sm" />
         <Skeleton className="h-10" />
         <Skeleton className="h-72" />
       </div>
@@ -55,18 +61,23 @@ export default function Campaign() {
         <ArrowLeft className="h-4 w-4" /> Campaigns
       </Link>
 
-      <div className="mb-10 flex items-end justify-between gap-6">
-        <div className="min-w-0">
-          <h1 className="display truncate text-[40px] leading-[1.1]">{c.name}</h1>
+      <div className="mb-10 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0 flex-[1_1_320px]">
+          <h1 className="display flex text-[32px] leading-[1.1] sm:text-[40px]">
+            <CampaignName id={c.id} brandId={c.brand_id} name={c.name} />
+          </h1>
           <p className="mt-3 text-[15px] text-muted">
             <span className="capitalize">{c.objective}</span> · {c.channels.map(channelLabel).join(", ")}
             {c.product_focus && <> · {c.product_focus}</>}
           </p>
         </div>
-        <StatusPill status={c.status} />
+        <div className="flex items-center gap-2">
+          <StatusPill status={c.status} />
+          <DeleteCampaign id={c.id} brandId={c.brand_id} name={c.name} />
+        </div>
       </div>
 
-      <nav className="mb-10 grid grid-cols-4 gap-6">
+      <nav className="mb-10 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
         {STEPS.map((s, i) => (
           <NavLink
             key={s.to}
@@ -86,7 +97,61 @@ export default function Campaign() {
         ))}
       </nav>
 
-      <Outlet context={{ detail: data, brandId: Number(brandId), base } satisfies CampaignCtx} />
+      <Suspense fallback={<PageFallback />}>
+        <Outlet context={{ detail: data, brandId: Number(brandId), base } satisfies CampaignCtx} />
+      </Suspense>
     </div>
+  );
+}
+
+function CampaignName({ id, brandId, name }: { id: number; brandId: number; name: string }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const rename = useMutation({
+    mutationFn: (v: string) => api.updateCampaign(id, { name: v }),
+    onSuccess: (campaign) => {
+      qc.setQueryData<CampaignDetail>(["campaign", id], (d) => (d ? { ...d, campaign } : d));
+      qc.invalidateQueries({ queryKey: ["campaigns", brandId] });
+      toast.success("Campaign renamed");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  return <EditableTitle value={rename.variables && rename.isPending ? rename.variables : name} label="Rename campaign" saving={rename.isPending} onSave={(v) => rename.mutate(v)} />;
+}
+
+/** Only rendered once the backend exposes DELETE /api/campaigns/{id}. */
+function DeleteCampaign({ id, brandId, name }: { id: number; brandId: number; name: string }) {
+  const supported = useSupports("delete", "/api/campaigns/{id}");
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const remove = useMutation({
+    mutationFn: () => api.deleteCampaign(id),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ["campaign", id] });
+      qc.invalidateQueries({ queryKey: ["campaigns", brandId] });
+      toast.success("Campaign deleted");
+      navigate(`/brands/${brandId}/campaigns`);
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  if (!supported) return null;
+  return (
+    <>
+      <button className="btn-ghost w-9 px-0 text-muted hover:text-danger" onClick={() => setOpen(true)} aria-label="Delete campaign" title="Delete campaign">
+        <Trash2 className="h-4 w-4" />
+      </button>
+      {open && (
+        <ConfirmDialog
+          title="Delete campaign?"
+          body={<>“{name}”, its creatives, videos and metrics will be removed. This can't be undone.</>}
+          confirmLabel="Delete"
+          pending={remove.isPending}
+          onConfirm={() => remove.mutate()}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }

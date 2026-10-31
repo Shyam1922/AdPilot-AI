@@ -26,6 +26,24 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Keyboard focus: a clear white ring that only appears for keyboard navigation. */
+:where(a, button, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+}
+:where(input, textarea):focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer components {
   .card {
     @apply rounded-2xl border border-line bg-surface;
@@ -43,7 +61,7 @@ body {
     @apply btn bg-raised text-danger hover:bg-red-500/10;
   }
   .input {
-    @apply w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-white/25;
+    @apply w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-white/40 focus:ring-2 focus:ring-white/10;
   }
   .label {
     @apply mb-1.5 block text-[13px] text-muted;

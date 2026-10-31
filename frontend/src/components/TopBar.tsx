@@ -6,13 +6,14 @@ import Logo from "./Logo";
 export default function TopBar({ nav, right }: { nav?: ReactNode; right?: ReactNode }) {
   return (
     <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-black/70 backdrop-blur-xl backdrop-saturate-150">
-      <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-6 px-6">
-        <Link to="/" className="justify-self-start">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6 md:grid md:grid-cols-[1fr_auto_1fr]">
+        <Link to="/" className="mr-auto md:mr-0 md:justify-self-start">
           <Logo />
         </Link>
-        <nav className="flex items-center gap-8">{nav}</nav>
-        <div className="flex items-center justify-self-end gap-2">{right}</div>
+        <nav className="hidden items-center gap-8 md:flex">{nav}</nav>
+        <div className="flex items-center gap-2 md:justify-self-end">{right}</div>
       </div>
+      {nav && <nav className="flex gap-6 overflow-x-auto border-t border-white/[0.06] px-4 py-2.5 sm:px-6 md:hidden">{nav}</nav>}
     </header>
   );
 }

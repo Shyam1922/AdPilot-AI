@@ -55,7 +55,8 @@ async function send(path: string, init: RequestInit = {}): Promise<Response> {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await send(path, init);
-  return (res.status === 204 ? undefined : await res.json()) as T;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 const json = (method: string, body?: unknown): RequestInit => ({
@@ -79,6 +80,8 @@ export function fileUrl(path: string | null | undefined): string | undefined {
 
 export const api = {
   health: () => request<Health>("/api/health"),
+  /** FastAPI's route table, so the UI can offer a feature only once the backend has it. */
+  routes: async () => (await request<{ paths: Record<string, Record<string, unknown>> }>("/openapi.json")).paths,
 
   // Brand Intelligence → Brand Memory
   listBrands: () => request<Brand[]>("/api/brands"),
@@ -87,6 +90,7 @@ export const api = {
   updateBrand: (id: number, patch: BrandUpdate) => request<Brand>(`/api/brands/${id}`, json("PATCH", patch)),
   uploadBrandFile: (id: number, file: File, role: "logo" | "product") =>
     request<Brand>(`/api/brands/${id}/uploads`, multipart({ file, role })),
+  deleteBrand: (id: number) => request<void>(`/api/brands/${id}`, { method: "DELETE" }),
 
   // Strategist + Campaign Management
   listCampaigns: (brandId: number) => request<Campaign[]>(`/api/campaigns?brand_id=${brandId}`),
@@ -94,6 +98,7 @@ export const api = {
   getCampaign: (id: number) => request<CampaignDetail>(`/api/campaigns/${id}`),
   updateCampaign: (id: number, patch: { name?: string; status?: "approved" | "scheduled" }) =>
     request<Campaign>(`/api/campaigns/${id}`, json("PATCH", patch)),
+  deleteCampaign: (id: number) => request<void>(`/api/campaigns/${id}`, { method: "DELETE" }),
   async exportCampaign(id: number): Promise<Blob> {
     return (await send(`/api/campaigns/${id}/export`)).blob();
   },

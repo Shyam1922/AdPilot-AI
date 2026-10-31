@@ -1,5 +1,5 @@
-import { type ReactNode } from "react";
-import { Loader2, RefreshCw, ServerOff } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Loader2, Pencil, RefreshCw, ServerOff } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { cn } from "@/lib/format";
 import type { RiskFlag, SourceType } from "@/lib/types";
@@ -8,9 +8,9 @@ import type { RiskFlag, SourceType } from "@/lib/types";
 
 export function PageHeader({ title, subtitle, action }: { title: ReactNode; subtitle?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-10 flex items-end justify-between gap-6">
-      <div className="min-w-0">
-        <h1 className="display text-[40px] leading-[1.05]">{title}</h1>
+    <div className="mb-10 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+      <div className="min-w-0 max-w-full">
+        <h1 className="display text-[32px] leading-[1.1] sm:text-[40px]">{title}</h1>
         {subtitle && <p className="mt-3 text-[15px] text-muted">{subtitle}</p>}
       </div>
       {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
@@ -73,11 +73,15 @@ export function ModeBadge({ mode }: { mode: string }) {
     template: "Template video",
     "template+ai_broll": "Template + AI b-roll",
     "template+tts": "Template + voiceover",
+    rules: "Rules",
+    "rules+gemini": "Rules + Gemini",
+    "rules+offline": "Rules + offline generator",
   };
+  const fallback = mode.replace(/_/g, " ").replace(/\+/g, " + ").replace(/^\w/, (c) => c.toUpperCase());
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-      <span className={cn("h-1.5 w-1.5 rounded-full", mode === "gemini" ? "bg-white" : "bg-muted/60")} />
-      {label[mode] ?? mode}
+      <span className={cn("h-1.5 w-1.5 rounded-full", mode.includes("gemini") ? "bg-white" : "bg-muted/60")} />
+      {label[mode] ?? fallback}
     </span>
   );
 }
@@ -170,6 +174,15 @@ export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={cn("h-4 w-4 animate-spin", className)} />;
 }
 
+/** Suspense fallback while a lazily loaded page arrives. */
+export function PageFallback() {
+  return (
+    <div className="flex justify-center py-24 text-muted">
+      <Spinner className="h-5 w-5" />
+    </div>
+  );
+}
+
 export function Chip({ children, className }: { children: ReactNode; className?: string }) {
   return <span className={cn("inline-flex items-center rounded-lg bg-raised px-2.5 py-1 text-xs text-body", className)}>{children}</span>;
 }
@@ -181,5 +194,99 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
       {children}
       {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
     </label>
+  );
+}
+
+/** A heading that turns into an input: Enter or blur saves, Escape cancels. */
+export function EditableTitle({ value, label, saving, onSave }: { value: string; label: string; saving?: boolean; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+
+  const commit = () => {
+    const v = draft.trim();
+    setEditing(false);
+    if (v && v !== value) onSave(v);
+    else setDraft(value);
+  };
+
+  if (editing)
+    return (
+      <input
+        autoFocus
+        aria-label={label}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+        style={{ font: "inherit", letterSpacing: "inherit" }}
+        className="-mx-2 w-full min-w-0 rounded-xl border border-white/25 bg-transparent px-2 text-white outline-none"
+      />
+    );
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2">
+      <span className="truncate">{value}</span>
+      <button
+        onClick={() => setEditing(true)}
+        disabled={saving}
+        aria-label={label}
+        title={label}
+        className="shrink-0 rounded-lg p-1.5 text-muted transition hover:bg-white/5 hover:text-white"
+      >
+        {saving ? <Spinner /> : <Pencil className="h-4 w-4" />}
+      </button>
+    </span>
+  );
+}
+
+export function ConfirmDialog({
+  title,
+  body,
+  confirmLabel,
+  pending,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  body: ReactNode;
+  confirmLabel: string;
+  pending?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !pending && onClose();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onClose, pending]);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => !pending && onClose()}>
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#16171a] p-6 shadow-panel"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="display text-[26px] leading-tight">{title}</h2>
+        <div className="mt-2 text-sm text-muted">{body}</div>
+        <div className="mt-6 flex justify-end gap-2">
+          <button className="btn-ghost" onClick={onClose} disabled={pending}>
+            Cancel
+          </button>
+          <button className="btn bg-danger text-black hover:bg-red-300" onClick={onConfirm} disabled={pending} autoFocus>
+            {pending && <Spinner />} {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

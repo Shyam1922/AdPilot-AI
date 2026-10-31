@@ -72,16 +72,16 @@ export default function Launch() {
                   >
                     {locked ? <Lock className="h-3.5 w-3.5" /> : done ? <Check className="h-4 w-4" /> : i + 1}
                   </span>
-                  <span className={cn("text-xs", done ? "text-ink" : "text-muted")}>{s.label}</span>
+                  <span className={cn("text-[11px] sm:text-xs", done ? "text-ink" : "text-muted")}>{s.label}</span>
                 </div>
-                {i < STEPS.length - 1 && <div className={cn("mx-3 mb-6 h-px flex-1", i < reached ? "bg-white" : "bg-line")} />}
+                {i < STEPS.length - 1 && <div className={cn("mx-1.5 mb-6 h-px flex-1 sm:mx-3", i < reached ? "bg-white" : "bg-line")} />}
               </div>
             );
           })}
         </div>
       </Card>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_320px] gap-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card title={`Approved creatives · ${approved.length}`}>
           {approved.length === 0 ? (
             <EmptyState

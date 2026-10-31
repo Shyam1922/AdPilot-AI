@@ -7,6 +7,7 @@ import { cn } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { ErrorState, Field, Spinner } from "@/components/ui";
 import TopBar, { HeroGlow } from "@/components/TopBar";
+import { useTitle } from "@/lib/hooks";
 import type { ManualBrandInput } from "@/lib/types";
 
 const list = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
@@ -22,6 +23,7 @@ export default function NewBrand() {
   const qc = useQueryClient();
   const toast = useToast();
   const { data: brands } = useQuery({ queryKey: ["brands"], queryFn: api.listBrands });
+  useTitle("Add brand");
   const [url, setUrl] = useState("");
   const [manualOpen, setManualOpen] = useState(false);
   const [m, setM] = useState({
@@ -69,8 +71,8 @@ export default function NewBrand() {
         }
       />
 
-      <div className="mx-auto max-w-2xl px-6 pb-28 pt-24">
-        <h1 className="display text-center text-[54px] leading-[1.02]">Turn a website into a campaign</h1>
+      <div className="mx-auto max-w-2xl px-4 pb-20 pt-14 sm:px-6 sm:pb-28 sm:pt-24">
+        <h1 className="display text-center text-[40px] leading-[1.04] sm:text-[54px]">Turn a website into a campaign</h1>
         <p className="mx-auto mt-5 max-w-lg text-center text-[17px] text-muted">
           AdPilot reads your site, keeps only claims it can source, and lists anything it can't verify for you to confirm.
         </p>
@@ -82,7 +84,7 @@ export default function NewBrand() {
             if (canSubmit) analyze.mutate();
           }}
         >
-          <div className="rounded-2xl border border-white/[0.08] bg-[#16171a]/95 shadow-panel transition focus-within:border-white/20">
+          <div className="rounded-2xl border border-white/[0.08] bg-[#16171a]/95 shadow-panel transition focus-within:border-white/35">
             <input
               className="w-full bg-transparent px-5 pb-8 pt-5 text-base font-medium text-white outline-none placeholder:font-normal placeholder:text-muted"
               placeholder="Paste a website or product page…"
@@ -93,7 +95,7 @@ export default function NewBrand() {
             />
 
             {manualOpen && (
-              <div className="grid grid-cols-2 gap-4 border-t border-white/[0.06] px-5 py-5 text-left">
+              <div className="grid gap-4 border-t border-white/[0.06] px-5 py-5 text-left sm:grid-cols-2">
                 <Field label="Brand name">
                   <input className="input" value={m.brand_name} onChange={set("brand_name")} />
                 </Field>
@@ -138,7 +140,7 @@ export default function NewBrand() {
               </button>
               <div className="flex items-center gap-3">
                 {analyze.isPending && (
-                  <span className="inline-flex items-center gap-2 text-[13px] text-muted">
+                  <span className="hidden items-center gap-2 text-[13px] text-muted sm:inline-flex">
                     <Spinner className="h-3.5 w-3.5" /> Reading the brand, 5–25 seconds
                   </span>
                 )}
@@ -149,7 +151,7 @@ export default function NewBrand() {
                   title="Build Brand Memory"
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black transition hover:bg-white/85 disabled:bg-raised disabled:text-muted"
                 >
-                  <ArrowUp className="h-4 w-4" />
+                  {analyze.isPending ? <Spinner className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -164,8 +166,8 @@ export default function NewBrand() {
         </form>
       </div>
 
-      <section className="mx-auto max-w-6xl px-6 pb-28">
-        <div className="grid grid-cols-3 gap-10">
+      <section className="mx-auto max-w-6xl px-4 pb-28 sm:px-6">
+        <div className="grid gap-10 md:grid-cols-3">
           {STEPS.map((s, i) => (
             <div key={s.title} className="border-t border-line pt-6">
               <p className="display text-[32px] leading-none text-muted">0{i + 1}</p>

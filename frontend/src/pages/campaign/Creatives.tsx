@@ -50,8 +50,23 @@ export default function Creatives() {
   });
 
   return (
-    <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-8">
-      <aside className="space-y-6">
+    <div className="grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="space-y-3 lg:hidden">
+        <select className="input h-10" value={selected.id} onChange={(e) => select(Number(e.target.value))} aria-label="Concept">
+          {groups.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.items.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {TYPE_LABEL[c.concept_type] ?? c.concept_type} · {c.hook || "Untitled"}
+                  {c.status !== "generated" ? ` · ${c.status}` : ""}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <GenerateConcepts campaignId={detail.campaign.id} label="Generate 5 more" ghost />
+      </div>
+      <aside className="hidden space-y-6 lg:block">
         {groups.map((g) => (
           <div key={g.label}>
             <p className="mb-2 px-1 text-[13px] font-medium text-muted">{g.label}</p>
@@ -152,9 +167,9 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
 
   return (
     <div className="min-w-0 space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="display text-[28px] leading-tight">
               {TYPE_LABEL[concept.concept_type] ?? concept.concept_type} <span className="font-normal text-muted">#{concept.id}</span>
             </h2>
@@ -203,7 +218,7 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
         <div className="space-y-5">
           {field("hook", "Hook")}
           {field("primary_text", "Primary text", { multiline: true })}
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid gap-5 sm:grid-cols-2">
             {field("headline", "Headline", { max: 40 })}
             {field("cta", "Call to action", { max: 20 })}
           </div>
@@ -216,7 +231,7 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
         )}
       </Card>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_280px] gap-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <PlatformCopy concept={concept} />
         <VideoPanel concept={concept} campaignId={campaignId} />
       </div>
@@ -336,7 +351,7 @@ function PlatformCopy({ concept }: { concept: Concept }) {
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div className="grid grid-cols-[110px_1fr] gap-3">
+    <div className="grid gap-1 sm:grid-cols-[110px_1fr] sm:gap-3">
       <dt className="text-muted">{k}</dt>
       <dd className="text-ink/90">{v}</dd>
     </div>
@@ -477,7 +492,7 @@ function VisualBrief({ concept }: { concept: Concept }) {
       {open && (
         <dl className="space-y-2.5 px-6 pb-6 text-sm">
           {rows.filter(([, v]) => v).map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[150px_1fr] gap-3">
+            <div key={k} className="grid gap-1 sm:grid-cols-[150px_1fr] sm:gap-3">
               <dt className="text-muted">{k}</dt>
               <dd className="text-ink/90">{v}</dd>
             </div>

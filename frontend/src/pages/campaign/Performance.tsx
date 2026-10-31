@@ -121,7 +121,7 @@ function Overview({ a }: { a: Analytics }) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-sm text-muted">
           Data source {a.data_sources.map((s) => <SourceBadge key={s} source={s} />)}
         </div>
@@ -135,7 +135,7 @@ function Overview({ a }: { a: Analytics }) {
         </div>
       )}
 
-      <div className="grid grid-cols-4 overflow-hidden rounded-2xl border border-line bg-line [&>*]:bg-surface" style={{ gap: 1 }}>
+      <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4 [&>*]:bg-surface" style={{ gap: 1 }}>
         <Kpi label="Impressions" value={num(t.impressions)} />
         <Kpi label="Clicks" value={num(t.clicks)} />
         <Kpi label="CTR" value={pct(t.ctr)} sub={`${num(t.clicks)} / ${num(t.impressions)}`} highlight={metric === "ctr"} />
@@ -146,7 +146,7 @@ function Overview({ a }: { a: Analytics }) {
         <Kpi label="ROAS" value={mult(t.roas)} sub={t.revenue != null ? `${inr(t.revenue)} revenue` : undefined} highlight={metric === "roas"} />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card title={`${metric.toUpperCase()} by concept · 95% interval`}>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -194,7 +194,8 @@ function Overview({ a }: { a: Analytics }) {
       </div>
 
       <Card title="By concept">
-        <table className="w-full text-sm">
+        <div className="-mx-6 overflow-x-auto px-6">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="text-left text-xs text-muted">
               <th className="pb-3 font-medium">Concept</th>
@@ -233,6 +234,7 @@ function Overview({ a }: { a: Analytics }) {
             ))}
           </tbody>
         </table>
+        </div>
         {a.objective_metric_note && <p className="mt-4 text-xs text-muted">{a.objective_metric_note}</p>}
       </Card>
 
@@ -278,7 +280,7 @@ function Optimization({ iterations, campaignId }: { iterations: Iteration[]; cam
 
   return (
     <section className="space-y-4 pt-4">
-      <div className="flex items-end justify-between gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div>
           <h2 className="display text-[32px] leading-tight">Optimization</h2>
           <p className="mt-2 text-[15px] text-muted">Ranks concepts on the numbers above, explains why, and drafts the next variants. Learnings go back to Brand Memory.</p>
@@ -307,7 +309,7 @@ function IterationCard({ it, round }: { it: Iteration; round: number }) {
       </div>
       <p className="leading-relaxed text-ink/90">{it.insight_summary}</p>
 
-      <div className="mt-6 grid grid-cols-2 gap-8">
+      <div className="mt-6 grid gap-8 md:grid-cols-2">
         <div>
           <p className="mb-2 text-[13px] font-medium text-muted">Signals used</p>
           <ul className="space-y-1.5 text-sm text-ink/80">
@@ -331,7 +333,7 @@ function IterationCard({ it, round }: { it: Iteration; round: number }) {
       {it.variants.length > 0 && (
         <div className="mt-6 border-t border-line pt-5">
           <p className="mb-3 text-[13px] font-medium text-muted">Next variants</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {it.variants.map((v) => (
               <Link
                 key={v.id}

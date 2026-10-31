@@ -4,10 +4,12 @@ import { Plus } from "lucide-react";
 import { api, fileUrl } from "@/lib/api";
 import { ApiOffline, ErrorState, Skeleton } from "@/components/ui";
 import TopBar, { HeroGlow } from "@/components/TopBar";
+import { useTitle } from "@/lib/hooks";
 
 export default function Home() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, retry: false });
   const brands = useQuery({ queryKey: ["brands"], queryFn: api.listBrands, enabled: health.isSuccess });
+  useTitle("Brands");
 
   if (brands.data && brands.data.length === 0) return <Navigate to="/brands/new" replace />;
 
@@ -25,15 +27,15 @@ export default function Home() {
       {health.isError ? (
         <ApiOffline onRetry={() => health.refetch()} />
       ) : (
-        <div className="mx-auto max-w-6xl px-6 pb-24 pt-20">
+        <div className="mx-auto max-w-6xl px-4 pb-24 pt-14 sm:px-6 sm:pt-20">
           <div className="mx-auto max-w-2xl text-center">
-            <h1 className="display text-[54px] leading-[1.02]">Your brands</h1>
+            <h1 className="display text-[40px] leading-[1.02] sm:text-[54px]">Your brands</h1>
             <p className="mt-4 text-[17px] text-muted">Each brand keeps its own memory: products, claims, tone and what has worked.</p>
           </div>
 
-          <div className="mt-16 grid grid-cols-3 gap-6">
+          <div className="mt-12 grid gap-6 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3">
             {brands.isError && (
-              <div className="col-span-3">
+              <div className="sm:col-span-2 lg:col-span-3">
                 <ErrorState error={brands.error} onRetry={() => brands.refetch()} />
               </div>
             )}

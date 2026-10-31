@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, X } from "lucide-react";
 import { Card, Chip, ModeBadge } from "@/components/ui";
+import { cn } from "@/lib/format";
 import GenerateConcepts from "@/components/GenerateConcepts";
 import { useCampaign } from "../Campaign";
 import { channelLabel } from "../Campaigns";
@@ -15,18 +16,18 @@ export default function Strategy() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-line bg-surface p-10">
-        <div className="mb-4 flex items-center justify-between">
+      <section className="rounded-2xl border border-line bg-surface p-6 sm:p-10">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm text-muted">Positioning</span>
           <ModeBadge mode={detail.campaign.generation_mode} />
         </div>
-        <p className="display text-[32px] leading-[1.25]">{s.positioning_statement}</p>
+        <p className="display text-[24px] leading-[1.3] sm:text-[32px] sm:leading-[1.25]">{s.positioning_statement}</p>
         <p className="mt-6 text-sm text-muted">
           Primary KPI <span className="ml-2 text-white">{s.primary_kpi}</span>
         </p>
       </section>
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${Math.min(s.segments.length, 3) || 1}, minmax(0, 1fr))` }}>
+      <div className={cn("grid gap-6", s.segments.length >= 2 && "md:grid-cols-2", s.segments.length >= 3 && "lg:grid-cols-3")}>
         {s.segments.map((seg) => (
           <Card key={seg.name} title={seg.name}>
             <ul className="space-y-1.5 text-sm text-ink/80">
@@ -39,7 +40,7 @@ export default function Strategy() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Creative direction">
           <ChipGroup label="Themes" items={s.campaign_themes} />
           <ChipGroup label="Angles" items={s.creative_angles} />
@@ -62,7 +63,7 @@ export default function Strategy() {
 
       {s.content_calendar.length > 0 && (
         <Card title="First 7 days">
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
             {s.content_calendar.map((d) => (
               <div key={`${d.day}-${d.channel}`} className="rounded-xl bg-surface-2 p-3">
                 <p className="text-xs font-medium text-white">Day {d.day}</p>
@@ -74,7 +75,7 @@ export default function Strategy() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Assumptions">
           <ul className="space-y-2 text-sm text-ink/80">
             {s.assumptions.map((a) => (
@@ -115,7 +116,7 @@ function ChipGroup({ label, items }: { label: string; items: string[] }) {
 function NextStep({ hasConcepts, campaignId, base }: { hasConcepts: boolean; campaignId: number; base: string }) {
   const navigate = useNavigate();
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-line bg-surface px-6 py-5">
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-6 py-5">
       <div>
         <p className="font-medium text-ink">{hasConcepts ? "Creatives are ready" : "Next: creatives"}</p>
         <p className="text-sm text-muted">
