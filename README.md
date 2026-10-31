@@ -4,7 +4,7 @@
 AdPilot AI learns a brand once, then plans, creates, launches and improves its campaigns, and every claim it makes is grounded in the brand's own product facts.
 
 > HackCBS 9.0 · 24-hour build · Team of 2
-> **Status (Sat 31 Oct, 14:10 IST):** G1 backend done. Website → Brand Memory → strategy → 5 claim-checked ad concepts works end to end through the API (offline mode tested; Gemini path ready). **Meko integration live** (verified against the real Meko server). Next: MP4 video renderer (G2), then analytics + optimization loop (G3).
+> **Status (Sat 31 Oct, 16:30 IST):** Backend feature-complete and the **frontend is connected**: every screen runs against the live API. Website → Brand Memory → strategy → 5 claim-checked ad concepts (language selector: English, Hindi, Hinglish) → **real 15-second MP4 video ad** → approval → export ZIP → labelled metrics (simulated or CSV) → ranking with confidence intervals → **4 next variants with reasons** → learnings saved to Brand Memory and Meko. **Meko live. Gemini live** with a model fallback chain and an offline fallback. **Evaluation scorecard: 14/14 checks pass.**
 
 ### Progress at a glance
 | Area | State |
@@ -12,12 +12,27 @@ AdPilot AI learns a brand once, then plans, creates, launches and improves its c
 | Website extraction (JSON-LD, Open Graph, Shopify feed, SSRF guard, hidden-text stripping) | ✅ Done |
 | Brand Memory (claim grounding, audience hypotheses, unknowns, brand colours) | ✅ Done |
 | Strategist (6 objectives) · Ad generator (5 concepts) · Claim guard · Platform copy | ✅ Done |
-| FastAPI app (14 endpoints) + tests (`pytest -q`, 4 passing) | ✅ Done |
+| FastAPI app (20 endpoints) + tests (`pytest -q`, 15 passing) | ✅ Done |
 | Frontend mock data from real API responses (`sample_data/fixtures/`) | ✅ Done |
 | Meko shared agent memory (datapack per brand, memories, context search, conversation traces) | ✅ Live |
-| MP4 video ad renderer + export ZIP | ⏳ G2, in progress |
-| Metrics, ranking, next-variant optimization, learnings → Meko | ⏳ G3 |
-| Frontend workspace | ⏳ Teammate's track |
+| MP4 video ad renderer (9:16 / 1:1 / 4:5, ~7–9 s per 15 s video) + export ZIP + backup video | ✅ Done |
+| Metrics (simulated + CSV), Wilson intervals, P(best), sample-size gates, next-variant optimization, learnings → Brand Memory + Meko | ✅ Done |
+| Gemini (structured JSON, model fallback chain, circuit breaker, offline fallback) | ✅ Live |
+| Demo reset (`reset_demo`) and evaluation scorecard (`evaluate`, 14/14 pass) | ✅ Done |
+| Frontend workspace (React + TypeScript, 8 screens on the live API) | ✅ Connected, teammate polishing |
+
+### Screenshots
+Captured from the running app on the fictional demo store *Velvaa Skin* (offline generator, simulated metrics, labelled as such in the UI).
+
+| | |
+|---|---|
+| ![Home](docs/screenshots/01-home.png) **Home:** all brands | ![Brand Memory](docs/screenshots/02-brand-memory.png) **Brand Memory:** profile, products, hidden-text warning |
+| ![Strategy](docs/screenshots/03-strategy.png) **Strategy:** segments, channel plan, 7-day calendar, "Not claimed" | ![Creatives](docs/screenshots/04-creatives.png) **Creatives:** editable copy, claim guard, approve / reject |
+| ![Launch](docs/screenshots/05-launch.png) **Launch:** approved creatives, export, locked channels | ![Performance](docs/screenshots/06-performance.png) **Performance:** simulated-data banner, KPIs, 95% intervals |
+
+**The generated video**, four scenes (hook → product → benefits → call to action), rendered by Python and FFmpeg from the brand's real product image:
+
+![Video frames](docs/screenshots/07-video-frames.png)
 
 ---
 
@@ -338,6 +353,7 @@ How it's built:
 adpilot-ai/
 ├── README.md                    ← you are here
 ├── docs/
+│   ├── screenshots/             ✅ app screenshots used in this README
 │   ├── API_CONTRACT.md          ← the handshake between frontend and backend (freeze at H1)
 │   ├── PLAN_ML_BACKEND.md       ← Aryan: intelligence layer, video, backend
 │   └── PLAN_FRONTEND.md         ← Teammate: UI/UX, demo storefront, pitch visuals
@@ -347,7 +363,7 @@ adpilot-ai/
 │   ├── app/
 │   │   ├── main.py              ✅ FastAPI app, CORS, /files, /demo-store, routers, /api/health
 │   │   ├── config.py  db.py  models.py  serializers.py   ✅
-│   │   ├── api/                 ✅ common brands campaigns concepts assets integrations · ⏳ analytics
+│   │   ├── api/                 ✅ common brands campaigns concepts assets analytics integrations
 │   │   ├── schemas/             ✅ brand.py concept.py
 │   │   ├── services/
 │   │   │   ├── extractor.py         ✅ SSRF-safe fetch, JSON-LD/OG/Shopify parsing, hidden-text stripping
@@ -359,14 +375,17 @@ adpilot-ai/
 │   │   │   ├── text_utils.py        ✅ similarity, trimming helpers
 │   │   │   ├── meko_memory.py       ✅ Meko MCP client (memories, context search, traces)
 │   │   │   ├── meko_sync.py         ✅ background Meko sync jobs
-│   │   │   ├── video_service.py     ⏳ Pillow/FFmpeg renderer (G2)
-│   │   │   ├── export_service.py    ⏳ ZIP export (G2)
-│   │   │   ├── metrics_calculator.py  concept_ranker.py  iteration_policy.py   ⏳ (G3)
-│   │   ├── scripts/             ✅ make_demo_images.py export_fixtures.py meko_check.py
+│   │   │   ├── video_service.py     ✅ Pillow/FFmpeg renderer: real product image, 4 animated scenes
+│   │   │   ├── video_jobs.py        ✅ background render job: queued → rendering → ready / failed
+│   │   │   ├── export_service.py    ✅ ZIP export (copy CSV, strategy, concepts, videos, README)
+│   │   │   ├── metrics_calculator.py ✅ CTR/CVR/CPC/CPA/ROAS, simulated data, CSV import
+│   │   │   ├── concept_ranker.py    ✅ Wilson CI, P(best), sample-size gates, winner rule
+│   │   │   ├── iteration_policy.py  ✅ 75% exploit / 25% explore plan, insight, limitations, learnings
+│   │   ├── scripts/             ✅ reset_demo.py evaluate.py meko_check.py gemini_check.py gemini_ping.py make_demo_images.py export_fixtures.py
 │   │   └── assets/fonts/        ✅ Poppins, Lora (SIL Open Font License)
-│   └── tests/                   ✅ conftest.py test_api_flow.py · ⏳ metrics / ranking / iteration tests
+│   └── tests/                   ✅ conftest.py test_api_flow.py test_video_export.py test_analytics.py test_eval.py (15 tests)
 ├── frontend/
-│   └── src/  pages/ components/ lib/api.ts lib/types.ts mocks/
+│   └── src/  pages/ (Home, NewBrand, BrandMemory, Campaigns, campaign/{Strategy,Creatives,Launch,Performance}) components/ lib/api.ts lib/types.ts   ✅ React 18 + TypeScript + Vite + Tailwind + TanStack Query + Recharts
 └── sample_data/
     ├── demo_store/              fictional Indian skincare storefront (offline-safe demo URL)
     ├── fixtures/                real backend responses for frontend mocks
@@ -403,7 +422,7 @@ The full request/response shapes and TypeScript types are in **[docs/API_CONTRAC
 | POST | `/api/integrations/meko/test` | Live round-trip to Meko: tool count + datapacks |
 | GET | `/api/concepts/{id}` | One concept with its latest video |
 
-Built so far: health, brands (analyze, list, get, patch, uploads), campaigns (create, list, get, patch), concepts (generate, get, patch, regenerate), assets (get, list), integrations (list, Meko test). The video, export, metrics, analytics and iterate endpoints arrive in G2–G3.
+Built so far: health, brands (analyze, list, get, patch, uploads), campaigns (create, list, get, patch, **export**), concepts (generate, get, patch, regenerate, **video**), assets (get, list), integrations (list, Meko test). Plus analytics: metrics/simulate, metrics (CSV upload), analytics, iterate.
 
 ---
 
@@ -414,7 +433,7 @@ Built so far: health, brands (analyze, list, get, patch, uploads), campaigns (cr
 | **Aryan** | ML, intelligence layer and backend: extraction, LLM, prompts, validation, strategy, concepts, **video pipeline**, metrics, ranking, iteration, API, tests | [docs/PLAN_ML_BACKEND.md](docs/PLAN_ML_BACKEND.md) |
 | **Teammate** | Frontend UI/UX: design system, all workspace screens, states and polling, charts, demo storefront page, pitch visuals | [docs/PLAN_FRONTEND.md](docs/PLAN_FRONTEND.md) |
 
-**How the two tracks never block each other:** the API contract is frozen at H1. The frontend builds against mock fixtures (`VITE_USE_MOCKS=true`). Aryan replaces those mocks with **real** backend responses at each sync point.
+**How the two tracks never block each other:** the API contract is frozen at H1. The frontend was built against fixtures of real API responses (`sample_data/fixtures/`) and now runs on the live API.
 
 **Clock:** started Sat 31 Oct 13:15 IST → **ends Sun 1 Nov 11:59 IST** (≈22 h 45 m). **Submit by 11:30**: never at the last minute.
 
@@ -471,7 +490,8 @@ Have ready: the backup MP4, a pre-seeded database (`scripts/reset_demo`), and a 
 
 ## 18. Long-term roadmap
 
-1. Brand Safety & Compliance Checker as a full module (platform policy packs, ASCI rules)
+1. **Brand Sources** (Aryan's idea): attach several sites to one brand (D2C store, marketplaces, Instagram, catalogue PDF), each read separately, merged into one Brand Memory with per-source evidence and conflict flags
+2. Brand Safety & Compliance Checker as a full module (platform policy packs, ASCI rules)
 2. Localization engine (Hindi, Hinglish, Tamil, Bengali; regional voiceover)
 3. UTM & attribution assistant
 4. Unified marketing assistant (chat over the shared brand and campaign data)
@@ -494,22 +514,29 @@ pip install -r requirements.txt
 cp .env.example .env            # Windows: copy .env.example .env
 #   GEMINI_API_KEY=...  optional; offline mode works without it
 #   MEKO_API_KEY=...    from cloud.mekodata.ai → Settings → API Keys
-ffmpeg -version                 # must be installed and on PATH (Windows: winget install Gyan.FFmpeg)
-pytest -q                       # 4 passed
+#   GEMINI_MODEL=gemini-flash-lite-latest is the default; fallbacks are tried automatically
+# FFmpeg: installed automatically as a pip package (imageio-ffmpeg). A system FFmpeg is used if present.
+#   Check: open http://localhost:8000/api/health and look for "ffmpeg": true
+pytest -q                          # 15 passed (offline, never uses your real keys)
 python -m app.scripts.meko_check   # ends with ALL CALLS OK when Meko is configured
+python -m app.scripts.gemini_check # ends with GEMINI OK when Gemini is configured
+python -m app.scripts.evaluate     # scorecard: 14/14 checks, saved to sample_data/fixtures/eval_scorecard.json
+python -m app.scripts.reset_demo   # wipes the DB and rebuilds the Velvaa demo (add --offline or --no-video)
 uvicorn app.main:app --reload --port 8000
 
 # frontend
 cd frontend
 npm install
-cp .env.example .env            # VITE_API_URL=http://localhost:8000, VITE_USE_MOCKS=false
+cp .env.example .env            # VITE_API_URL=http://localhost:8000
 npm run dev                     # http://localhost:5173
 ```
 
 API docs are auto-generated at `http://localhost:8000/docs`.
 
-**Try it in 30 seconds:** open `/docs` → `POST /api/brands/analyze` with `{"url": "https://demo.adpilot.local/"}` → `POST /api/campaigns` with `{"brand_id": 1, "objective": "sales"}` → `POST /api/campaigns/1/concepts/generate`. A few seconds after analyzing, `GET /api/brands/1` shows `integrations.meko.status = "synced"`.
+**Try it in 60 seconds:** open `/docs` → `POST /api/brands/analyze` with `{"url": "https://demo.adpilot.local/"}` → `POST /api/campaigns` with `{"brand_id": 1, "objective": "sales"}` → `POST /api/campaigns/1/concepts/generate` → `POST /api/concepts/1/video` → poll `GET /api/assets/1` until `ready`, then open its `url` in the browser → `PATCH /api/concepts/1` with `{"status": "approved"}` → `GET /api/campaigns/1/export` downloads the ZIP → `POST /api/campaigns/1/metrics/simulate` → `GET /api/campaigns/1/analytics` → `POST /api/campaigns/1/iterate` (4 new variants + learnings). A few seconds after analyzing, `GET /api/brands/1` shows `integrations.meko.status = "synced"`.
 
 > If you pulled a newer version and the server errors with "no such column", delete `backend/adpilot.db`; it is recreated on start (the schema is still changing during the hackathon).
 
-**Frontend without the backend:** set `VITE_USE_MOCKS=true` and read the JSON files in `sample_data/fixtures/` (real API responses).
+**Using the app:** start the backend (port 8000) and the frontend (port 5173), open `http://localhost:5173`, click **Add a brand**, paste `https://demo.adpilot.local/`, then Campaigns → New campaign → Creatives → Generate. In the sidebar footer, "LLM" shows whether Gemini or the offline generator is writing.
+
+**Fixtures:** the JSON files in `sample_data/fixtures/` are real API responses (useful for UI work without a running backend). `sample_data/backup_video.mp4` is the demo backup video.
