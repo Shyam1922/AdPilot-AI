@@ -1,0 +1,514 @@
+{
+  "id": 1,
+  "campaign_id": 1,
+  "objective_metric": "cvr",
+  "insight_summary": "Leader on CVR: #4 offer at CVR 4.99% (95% CI 3.25%–7.58%, n=401 clicks, directional). Its interval overlaps the runner-up (#2 demo), so it is not a confirmed winner yet. Lowest: #3 storytelling at CVR 1.30% (95% CI 0.36%–4.61%, n=154 clicks, insufficient data). The next batch keeps most variants close to what is working and reserves one for exploration.",
+  "ranking": [
+    {
+      "concept_id": 4,
+      "rank": 1,
+      "primary_value": 0.04987531172069826,
+      "ci_low": 0.03251530614773486,
+      "ci_high": 0.07577791273095744,
+      "p_best": 0.538,
+      "sample_status": "directional",
+      "trials": 401
+    },
+    {
+      "concept_id": 2,
+      "rank": 2,
+      "primary_value": 0.042071197411003236,
+      "ci_low": 0.024748676470653607,
+      "ci_high": 0.0706401720712283,
+      "p_best": 0.241,
+      "sample_status": "early_signal",
+      "trials": 309
+    },
+    {
+      "concept_id": 1,
+      "rank": 3,
+      "primary_value": 0.03773584905660377,
+      "ci_low": 0.023358897421132924,
+      "ci_high": 0.06041416251506776,
+      "p_best": 0.102,
+      "sample_status": "early_signal",
+      "trials": 424
+    },
+    {
+      "concept_id": 5,
+      "rank": 4,
+      "primary_value": 0.034722222222222224,
+      "ci_low": 0.018967607724656183,
+      "ci_high": 0.06272602334096299,
+      "p_best": 0.108,
+      "sample_status": "early_signal",
+      "trials": 288
+    },
+    {
+      "concept_id": 3,
+      "rank": 5,
+      "primary_value": 0.012987012987012988,
+      "ci_low": 0.003568687884314088,
+      "ci_high": 0.04611149782084855,
+      "p_best": 0.01,
+      "sample_status": "insufficient_data",
+      "trials": 154
+    }
+  ],
+  "selected_signals": [
+    {
+      "concept_id": 4,
+      "signal": "CVR 4.99%, P(best) 54%, directional"
+    },
+    {
+      "concept_id": 2,
+      "signal": "CVR 4.21%, P(best) 24%, early signal"
+    },
+    {
+      "concept_id": 1,
+      "signal": "CVR 3.77%, P(best) 10%, early signal"
+    },
+    {
+      "concept_id": 5,
+      "signal": "CVR 3.47%, P(best) 11%, early signal"
+    },
+    {
+      "concept_id": 3,
+      "signal": "CVR 1.30%, P(best) 1%, insufficient data"
+    }
+  ],
+  "limitations": [
+    "These metrics are SIMULATED sample data for the demo. They are not real campaign results.",
+    "Imported CSV data is only as accurate as the export it came from.",
+    "Some concepts have too little data to judge; their ranks can change a lot with more delivery.",
+    "Several results are early signals; wait for more data before cutting budget.",
+    "This is observational data: a higher rate is correlation, not proof that the creative caused it (audience, timing and delivery also differ).",
+    "Ranked by conversion rate (conversions ÷ clicks), the metric that matches a sales/leads objective."
+  ],
+  "data_sources": [
+    "imported_csv",
+    "simulated"
+  ],
+  "variants": [
+    {
+      "id": 6,
+      "campaign_id": 1,
+      "iteration_id": 1,
+      "parent_concept_id": 4,
+      "concept_type": "offer",
+      "target_segment": "People in hot, humid Indian cities",
+      "angle": "Value framing: what you get at this price (only real prices, no invented discounts)",
+      "hook": "Everything you get for ₹899.",
+      "primary_text": "For ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that absorbs quickly. No gimmicks, just the price on our site.",
+      "headline": "Saffron Dew Serum · ₹899",
+      "cta": "Shop now",
+      "visual_brief": {
+        "scene": "Product hero on a solid brand-colour background with price and what's included",
+        "composition": "Vertical 9:16, product in the middle third",
+        "product_placement": "Real product image, centred, never redrawn or altered",
+        "text_safe_area": "Top 30% for hook, bottom 20% for CTA; keep clear of platform UI",
+        "style": "skincare; brand colours; clean, flat type",
+        "layout": "split"
+      },
+      "platform_copy": {
+        "instagram": {
+          "caption": "Everything you get for ₹899.\n\nFor ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that absorbs quickly. No gimmicks, just the price on our site.\n\nShop now → link in bio\n\n#VelvaaSkin #Skincare #IndianSkincare #FragranceFree #Niacinamide #Kesar #MadeInIndia #D2CIndia",
+          "hashtags": [
+            "#VelvaaSkin",
+            "#Skincare",
+            "#IndianSkincare",
+            "#FragranceFree",
+            "#Niacinamide",
+            "#Kesar",
+            "#MadeInIndia",
+            "#D2CIndia"
+          ]
+        },
+        "meta_ads": {
+          "primary_text": "Everything you get for ₹899. For ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that absorbs quickly. No gimmicks, just the price on our site.",
+          "headline": "Saffron Dew Serum · ₹899",
+          "description": "Saffron extract",
+          "cta": "Shop now"
+        },
+        "google_ads": {
+          "headlines": [
+            "Saffron Dew Serum · ₹899",
+            "Saffron Dew Serum",
+            "Velvaa Skin Saffron Dew Serum",
+            "Saffron extract",
+            "Lightweight, non-sticky"
+          ],
+          "descriptions": [
+            "For ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that",
+            "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture. Shop now."
+          ]
+        }
+      },
+      "video_script": [
+        {
+          "beat": "hook",
+          "seconds": 3.0,
+          "on_screen_text": "Everything you get for ₹899.",
+          "voiceover": "Everything you get for ₹899."
+        },
+        {
+          "beat": "product",
+          "seconds": 4.0,
+          "on_screen_text": "Velvaa Saffron Dew Serum",
+          "voiceover": "Meet Velvaa Saffron Dew Serum."
+        },
+        {
+          "beat": "benefit",
+          "seconds": 4.0,
+          "on_screen_text": "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture · Fragrance-free and suitable for daily use",
+          "voiceover": "Saffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly."
+        },
+        {
+          "beat": "cta",
+          "seconds": 4.0,
+          "on_screen_text": "Shop now · ₹899",
+          "voiceover": "Shop now."
+        }
+      ],
+      "claim_sources": [
+        "approved_claims"
+      ],
+      "risk_flags": [
+        {
+          "code": "trimmed_for_platform",
+          "message": "Some Google Ads lines were shortened at a word boundary to fit 30/90 characters. Review them.",
+          "severity": "info",
+          "field": "platform_copy"
+        }
+      ],
+      "changed_variables": [
+        "hook"
+      ],
+      "rationale": "Builds on #4 offer at CVR 4.99% (95% CI 3.25%–7.58%, n=401 clicks, directional). Changes only the hook so any difference can be attributed to that change.",
+      "is_exploration": false,
+      "status": "generated",
+      "edited": false,
+      "generation_mode": "offline",
+      "prompt_version": "concepts-v1",
+      "latest_video": null,
+      "created_at": "2026-10-31T09:17:04.736564+00:00",
+      "updated_at": "2026-10-31T09:17:04.736579+00:00"
+    },
+    {
+      "id": 7,
+      "campaign_id": 1,
+      "iteration_id": 1,
+      "parent_concept_id": 4,
+      "concept_type": "offer",
+      "target_segment": "People in hot, humid Indian cities",
+      "angle": "Value framing: what you get at this price (only real prices, no invented discounts)",
+      "hook": "Saffron Dew Serum. ₹899. That's it.",
+      "primary_text": "For ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that absorbs quickly. No gimmicks, just the price on our site.",
+      "headline": "Shop Saffron Dew Serum",
+      "cta": "Add to cart",
+      "visual_brief": {
+        "scene": "Product hero on a solid brand-colour background with price and what's included",
+        "composition": "Vertical 9:16, product in the middle third",
+        "product_placement": "Real product image, centred, never redrawn or altered",
+        "text_safe_area": "Top 30% for hook, bottom 20% for CTA; keep clear of platform UI",
+        "style": "skincare; brand colours; clean, flat type",
+        "layout": "split"
+      },
+      "platform_copy": {
+        "instagram": {
+          "caption": "Saffron Dew Serum. ₹899. That's it.\n\nFor ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that absorbs quickly. No gimmicks, just the price on our site.\n\nAdd to cart → link in bio\n\n#VelvaaSkin #Skincare #IndianSkincare #FragranceFree #Niacinamide #Kesar #MadeInIndia #D2CIndia",
+          "hashtags": [
+            "#VelvaaSkin",
+            "#Skincare",
+            "#IndianSkincare",
+            "#FragranceFree",
+            "#Niacinamide",
+            "#Kesar",
+            "#MadeInIndia",
+            "#D2CIndia"
+          ]
+        },
+        "meta_ads": {
+          "primary_text": "Saffron Dew Serum. ₹899. That's it. For ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that absorbs quickly. No gimmicks, just the price on our site.",
+          "headline": "Shop Saffron Dew Serum",
+          "description": "Saffron extract",
+          "cta": "Add to cart"
+        },
+        "google_ads": {
+          "headlines": [
+            "Shop Saffron Dew Serum",
+            "Saffron Dew Serum",
+            "Velvaa Skin Saffron Dew Serum",
+            "Saffron extract",
+            "Lightweight, non-sticky"
+          ],
+          "descriptions": [
+            "For ₹899: saffron extract with 5% niacinamide, lightweight, non-sticky texture that",
+            "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture. Add to cart."
+          ]
+        }
+      },
+      "video_script": [
+        {
+          "beat": "hook",
+          "seconds": 3.0,
+          "on_screen_text": "Saffron Dew Serum. ₹899. That's it.",
+          "voiceover": "Saffron Dew Serum. ₹899. That's it."
+        },
+        {
+          "beat": "product",
+          "seconds": 4.0,
+          "on_screen_text": "Velvaa Saffron Dew Serum",
+          "voiceover": "Meet Velvaa Saffron Dew Serum."
+        },
+        {
+          "beat": "benefit",
+          "seconds": 4.0,
+          "on_screen_text": "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture · Fragrance-free and suitable for daily use",
+          "voiceover": "Saffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly."
+        },
+        {
+          "beat": "cta",
+          "seconds": 4.0,
+          "on_screen_text": "Shop now · ₹899",
+          "voiceover": "Shop now."
+        }
+      ],
+      "claim_sources": [
+        "approved_claims"
+      ],
+      "risk_flags": [
+        {
+          "code": "trimmed_for_platform",
+          "message": "Some Google Ads lines were shortened at a word boundary to fit 30/90 characters. Review them.",
+          "severity": "info",
+          "field": "platform_copy"
+        }
+      ],
+      "changed_variables": [
+        "cta",
+        "headline"
+      ],
+      "rationale": "Builds on #4 offer at CVR 4.99% (95% CI 3.25%–7.58%, n=401 clicks, directional). Changes only the cta and headline so any difference can be attributed to that change.",
+      "is_exploration": false,
+      "status": "generated",
+      "edited": false,
+      "generation_mode": "offline",
+      "prompt_version": "concepts-v1",
+      "latest_video": null,
+      "created_at": "2026-10-31T09:17:04.738688+00:00",
+      "updated_at": "2026-10-31T09:17:04.738701+00:00"
+    },
+    {
+      "id": 8,
+      "campaign_id": 1,
+      "iteration_id": 1,
+      "parent_concept_id": 2,
+      "concept_type": "demo",
+      "target_segment": "Skincare beginners who want a short routine",
+      "angle": "Product demo: texture, size and how to use it in under 10 seconds",
+      "hook": "Watch the texture first.",
+      "primary_text": "Saffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly. Fragrance-free and suitable for daily use. That's Saffron Dew Serum.",
+      "headline": "See Saffron Dew Serum up close",
+      "cta": "Add to cart",
+      "visual_brief": {
+        "scene": "Product on a clean surface; macro of texture; hand picking it up",
+        "composition": "Vertical 9:16, product in the middle third",
+        "product_placement": "Real product image, centred, never redrawn or altered",
+        "text_safe_area": "Top 30% for hook, bottom 20% for CTA; keep clear of platform UI",
+        "style": "skincare; brand colours; clean, flat type",
+        "layout": "hero"
+      },
+      "platform_copy": {
+        "instagram": {
+          "caption": "Watch the texture first.\n\nSaffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly. Fragrance-free and suitable for daily use. That's Saffron Dew Serum.\n\nAdd to cart → link in bio\n\n#VelvaaSkin #Skincare #IndianSkincare #FragranceFree #Niacinamide #Kesar #MadeInIndia #D2CIndia",
+          "hashtags": [
+            "#VelvaaSkin",
+            "#Skincare",
+            "#IndianSkincare",
+            "#FragranceFree",
+            "#Niacinamide",
+            "#Kesar",
+            "#MadeInIndia",
+            "#D2CIndia"
+          ]
+        },
+        "meta_ads": {
+          "primary_text": "Watch the texture first. Saffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly. Fragrance-free and suitable for daily use. That's Saffron Dew Serum.",
+          "headline": "See Saffron Dew Serum up close",
+          "description": "Saffron extract",
+          "cta": "Add to cart"
+        },
+        "google_ads": {
+          "headlines": [
+            "See Saffron Dew Serum up close",
+            "Saffron Dew Serum",
+            "Velvaa Skin Saffron Dew Serum",
+            "Saffron extract",
+            "Lightweight, non-sticky"
+          ],
+          "descriptions": [
+            "Saffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly",
+            "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture. Add to cart."
+          ]
+        }
+      },
+      "video_script": [
+        {
+          "beat": "hook",
+          "seconds": 3.0,
+          "on_screen_text": "Watch the texture first.",
+          "voiceover": "Watch the texture first."
+        },
+        {
+          "beat": "product",
+          "seconds": 4.0,
+          "on_screen_text": "Velvaa Saffron Dew Serum",
+          "voiceover": "Meet Velvaa Saffron Dew Serum."
+        },
+        {
+          "beat": "benefit",
+          "seconds": 4.0,
+          "on_screen_text": "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture · Fragrance-free and suitable for daily use",
+          "voiceover": "Saffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly."
+        },
+        {
+          "beat": "cta",
+          "seconds": 4.0,
+          "on_screen_text": "Add to cart · ₹899",
+          "voiceover": "Add to cart."
+        }
+      ],
+      "claim_sources": [
+        "approved_claims"
+      ],
+      "risk_flags": [
+        {
+          "code": "trimmed_for_platform",
+          "message": "Some Google Ads lines were shortened at a word boundary to fit 30/90 characters. Review them.",
+          "severity": "info",
+          "field": "platform_copy"
+        }
+      ],
+      "changed_variables": [
+        "hook"
+      ],
+      "rationale": "Builds on #2 demo at CVR 4.21% (95% CI 2.47%–7.06%, n=309 clicks, early signal). Changes only the hook so any difference can be attributed to that change.",
+      "is_exploration": false,
+      "status": "generated",
+      "edited": false,
+      "generation_mode": "offline",
+      "prompt_version": "concepts-v1",
+      "latest_video": null,
+      "created_at": "2026-10-31T09:17:04.741433+00:00",
+      "updated_at": "2026-10-31T09:17:04.741445+00:00"
+    },
+    {
+      "id": 9,
+      "campaign_id": 1,
+      "iteration_id": 1,
+      "parent_concept_id": 3,
+      "concept_type": "storytelling",
+      "target_segment": "People in hot, humid Indian cities",
+      "angle": "Origin story: why the brand started and what it refuses to do",
+      "hook": "Why we made Saffron Dew Serum.",
+      "primary_text": "Velvaa started in a small Jaipur kitchen with one question. Saffron Dew Serum is what came out of it: saffron extract with 5% niacinamide.",
+      "headline": "The story behind Velvaa Skin",
+      "cta": "Buy now",
+      "visual_brief": {
+        "scene": "Warm, natural-light kitchen or workspace that hints at the brand's origin",
+        "composition": "Vertical 9:16, product in the middle third",
+        "product_placement": "Real product image, centred, never redrawn or altered",
+        "text_safe_area": "Top 30% for hook, bottom 20% for CTA; keep clear of platform UI",
+        "style": "skincare; brand colours; clean, flat type",
+        "layout": "minimal"
+      },
+      "platform_copy": {
+        "instagram": {
+          "caption": "Why we made Saffron Dew Serum.\n\nVelvaa started in a small Jaipur kitchen with one question. Saffron Dew Serum is what came out of it: saffron extract with 5% niacinamide.\n\nBuy now → link in bio\n\n#VelvaaSkin #Skincare #IndianSkincare #FragranceFree #Niacinamide #Kesar #MadeInIndia #D2CIndia",
+          "hashtags": [
+            "#VelvaaSkin",
+            "#Skincare",
+            "#IndianSkincare",
+            "#FragranceFree",
+            "#Niacinamide",
+            "#Kesar",
+            "#MadeInIndia",
+            "#D2CIndia"
+          ]
+        },
+        "meta_ads": {
+          "primary_text": "Why we made Saffron Dew Serum. Velvaa started in a small Jaipur kitchen with one question. Saffron Dew Serum is what came out of it: saffron extract with 5% niacinamide.",
+          "headline": "The story behind Velvaa Skin",
+          "description": "Saffron extract",
+          "cta": "Buy now"
+        },
+        "google_ads": {
+          "headlines": [
+            "The story behind Velvaa Skin",
+            "Saffron Dew Serum",
+            "Velvaa Skin Saffron Dew Serum",
+            "Saffron extract",
+            "Lightweight, non-sticky"
+          ],
+          "descriptions": [
+            "Velvaa started in a small Jaipur kitchen with one question. Saffron Dew Serum is what came",
+            "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture. Buy now."
+          ]
+        }
+      },
+      "video_script": [
+        {
+          "beat": "hook",
+          "seconds": 3.0,
+          "on_screen_text": "Why we made Saffron Dew Serum.",
+          "voiceover": "Why we made Saffron Dew Serum."
+        },
+        {
+          "beat": "product",
+          "seconds": 4.0,
+          "on_screen_text": "Velvaa Saffron Dew Serum",
+          "voiceover": "Meet Velvaa Saffron Dew Serum."
+        },
+        {
+          "beat": "benefit",
+          "seconds": 4.0,
+          "on_screen_text": "Saffron extract with 5% niacinamide · Lightweight, non-sticky texture · Fragrance-free and suitable for daily use",
+          "voiceover": "Saffron extract with 5% niacinamide. Lightweight, non-sticky texture that absorbs quickly."
+        },
+        {
+          "beat": "cta",
+          "seconds": 4.0,
+          "on_screen_text": "Buy now · ₹899",
+          "voiceover": "Buy now."
+        }
+      ],
+      "claim_sources": [
+        "approved_claims"
+      ],
+      "risk_flags": [
+        {
+          "code": "trimmed_for_platform",
+          "message": "Some Google Ads lines were shortened at a word boundary to fit 30/90 characters. Review them.",
+          "severity": "info",
+          "field": "platform_copy"
+        }
+      ],
+      "changed_variables": [
+        "hook",
+        "segment"
+      ],
+      "rationale": "Exploration: #3 storytelling at CVR 1.30% (95% CI 0.36%–4.61%, n=154 clicks, insufficient data) has the least data, so it gets a new hook for a different audience segment instead of being dropped early.",
+      "is_exploration": true,
+      "status": "generated",
+      "edited": false,
+      "generation_mode": "offline",
+      "prompt_version": "concepts-v1",
+      "latest_video": null,
+      "created_at": "2026-10-31T09:17:04.743885+00:00",
+      "updated_at": "2026-10-31T09:17:04.743898+00:00"
+    }
+  ],
+  "generation_mode": "rules+offline",
+  "created_at": "2026-10-31T09:17:04.729696+00:00"
+}

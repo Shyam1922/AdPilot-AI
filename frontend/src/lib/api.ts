@@ -14,7 +14,15 @@ import type {
   Health,
   IntegrationStatus,
   Iteration,
+  BrandMemoryView,
   Language,
+  PostMetrics,
+  PostingInsights,
+  SocialAccount,
+  SocialPlatform,
+  SocialPost,
+  VideoMode,
+  VideoOption,
 } from "./types";
 
 export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
@@ -109,8 +117,39 @@ export const api = {
   updateConcept: (id: number, patch: ConceptUpdate) => request<Concept>(`/api/concepts/${id}`, json("PATCH", patch)),
   regenerateField: (id: number, field: CopyField) =>
     request<Concept>(`/api/concepts/${id}/regenerate`, json("POST", { field })),
-  renderVideo: (conceptId: number, body: { format?: "9:16" | "1:1" } = {}) =>
+  renderVideo: (conceptId: number, body: { format?: "9:16" | "1:1"; mode?: VideoMode } = {}) =>
     request<Asset>(`/api/concepts/${conceptId}/video`, json("POST", body)),
+  videoOptions: (conceptId: number) =>
+    request<{ modes: VideoOption[] }>(`/api/concepts/${conceptId}/video-options`),
+  uploadAiClip: (conceptId: number, file: File) =>
+    request<Asset>(`/api/concepts/${conceptId}/ai-clip`, multipart({ file })),
+  removeAiClip: (conceptId: number) => request<void>(`/api/concepts/${conceptId}/ai-clip`, { method: "DELETE" }),
+
+  // Social posts (drafts only; nothing is published)
+  generatePosts: (conceptId: number, body: { platforms?: SocialPlatform[]; language?: Language } = {}) =>
+    request<SocialPost[]>(`/api/concepts/${conceptId}/posts/generate`, json("POST", body)),
+  listPosts: (campaignId: number) => request<SocialPost[]>(`/api/campaigns/${campaignId}/posts`),
+  updatePost: (id: number, patch: { text?: string; status?: "generated" | "approved" | "rejected" }) =>
+    request<SocialPost>(`/api/posts/${id}`, json("PATCH", patch)),
+  regeneratePost: (id: number) => request<SocialPost>(`/api/posts/${id}/regenerate`, json("POST")),
+  deletePost: (id: number) => request<void>(`/api/posts/${id}`, { method: "DELETE" }),
+  schedulePost: (id: number, scheduledAt: string) =>
+    request<SocialPost>(`/api/posts/${id}/schedule`, json("POST", { scheduled_at: scheduledAt })),
+  unschedulePost: (id: number) => request<SocialPost>(`/api/posts/${id}/schedule`, { method: "DELETE" }),
+  publishPost: (id: number, mode: "manual_share" | "simulated", external_url = "") =>
+    request<SocialPost>(`/api/posts/${id}/publish`, json("POST", { mode, external_url })),
+  setPostMetrics: (id: number, m: PostMetrics) => request<SocialPost>(`/api/posts/${id}/metrics`, json("POST", m)),
+  simulateEngagement: (campaignId: number) =>
+    request<{ posts_updated: number; source: "simulated" }>(`/api/campaigns/${campaignId}/posts/simulate-engagement`, json("POST")),
+  listSocials: (brandId: number) => request<SocialAccount[]>(`/api/brands/${brandId}/socials`),
+  connectSocial: (brandId: number, platform: SocialPlatform, handle_or_url: string) =>
+    request<SocialAccount[]>(`/api/brands/${brandId}/socials/${platform}`, json("PUT", { handle_or_url })),
+  disconnectSocial: (brandId: number, platform: SocialPlatform) =>
+    request<SocialAccount[]>(`/api/brands/${brandId}/socials/${platform}`, { method: "DELETE" }),
+  brandPosts: (brandId: number) => request<SocialPost[]>(`/api/brands/${brandId}/posts`),
+  postingInsights: (brandId: number) => request<PostingInsights>(`/api/brands/${brandId}/posting-insights`),
+  brandMemory: (brandId: number, recall = false) =>
+    request<BrandMemoryView>(`/api/brands/${brandId}/memory${recall ? "?recall=true" : ""}`),
   getAsset: (id: number) => request<Asset>(`/api/assets/${id}`),
 
   // Analytics + Optimization

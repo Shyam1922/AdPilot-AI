@@ -1,0 +1,91 @@
+{
+  "generation": "offline",
+  "passed": 14,
+  "total": 14,
+  "checks": [
+    {
+      "name": "Claim guard catches risky copy",
+      "score": "12/12",
+      "pass": true,
+      "detail": "12 adversarial lines (cures, fake reviews, invented offers, superlatives, invented numbers); missed: none"
+    },
+    {
+      "name": "Claim guard leaves honest copy alone",
+      "score": "6/6",
+      "pass": true,
+      "detail": "false alarms: none"
+    },
+    {
+      "name": "Almost never declares a winner when there is none",
+      "score": "0.0% false winners over 400 identical-concept trials",
+      "pass": true,
+      "detail": "all concepts share the same true CTR; naive 'highest CTR wins' would be wrong ~100% of the time"
+    },
+    {
+      "name": "Still finds a real winner",
+      "score": "100% detected over 400 trials with a true 2x CTR gap",
+      "pass": true,
+      "detail": "8,000 impressions per concept, 4% vs 2% CTR"
+    },
+    {
+      "name": "SSRF protection rejects unsafe URLs",
+      "score": "8/8",
+      "pass": true,
+      "detail": "loopback, private, cloud-metadata, file/ftp, odd ports; allowed by mistake: none"
+    },
+    {
+      "name": "Zero-data edge cases return 'not enough data', never fake numbers",
+      "score": "pass",
+      "pass": true,
+      "detail": "0 impressions / 0 clicks give None rates, no confidence interval, status insufficient_data"
+    },
+    {
+      "name": "Hidden prompt-injection text never reaches Brand Memory",
+      "score": "5/5",
+      "pass": true,
+      "detail": "page hides an 'ignore your instructions' block; leaked phrases: none"
+    },
+    {
+      "name": "Every approved claim is traceable to a source",
+      "score": "8/8",
+      "pass": true,
+      "detail": "each claim cites a snippet id and >=60% of its words appear in it; weak: none"
+    },
+    {
+      "name": "Generated concepts carry no blocking risk flags",
+      "score": "5/5",
+      "pass": true,
+      "detail": "5 concepts checked by the same guard; blocks: none"
+    },
+    {
+      "name": "Concepts are genuinely different",
+      "score": "5 hooks, 0 near-duplicates",
+      "pass": true,
+      "detail": "pairwise word-overlap (Jaccard) of hooks must stay <= 0.6"
+    },
+    {
+      "name": "Google Ads copy fits platform limits",
+      "score": "0 violations",
+      "pass": true,
+      "detail": "headlines <= 30 chars, descriptions <= 90 chars"
+    },
+    {
+      "name": "Mode is labelled on every AI output",
+      "score": "yes",
+      "pass": true,
+      "detail": "generation_mode = ['offline']"
+    },
+    {
+      "name": "Simulated data is always labelled",
+      "score": "yes",
+      "pass": true,
+      "detail": "sources=['simulated'], warning shown to the user"
+    },
+    {
+      "name": "Optimization is explainable and honest",
+      "score": "4 variants",
+      "pass": true,
+      "detail": "every variant names its parent, what changed and why; limitations (correlation, simulated) always shown"
+    }
+  ]
+}

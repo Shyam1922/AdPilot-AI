@@ -3,8 +3,13 @@
 **The AI marketing team for Indian D2C brands and SMEs.**
 AdPilot AI learns a brand once, then plans, creates, launches and improves its campaigns, and every claim it makes is grounded in the brand's own product facts.
 
-> HackCBS 9.0 · 24-hour build · Team of 2
-> **Status (Sat 31 Oct, 16:30 IST):** Backend feature-complete and the **frontend is connected**: every screen runs against the live API. Website → Brand Memory → strategy → 5 claim-checked ad concepts (language selector: English, Hindi, Hinglish) → **real 15-second MP4 video ad** → approval → export ZIP → labelled metrics (simulated or CSV) → ranking with confidence intervals → **4 next variants with reasons** → learnings saved to Brand Memory and Meko. **Meko live. Gemini live** with a model fallback chain and an offline fallback. **Evaluation scorecard: 14/14 checks pass.**
+> **Status:** end-to-end and running on the live API. Website → Brand Memory → strategy → 5 claim-checked ad concepts (English / Hindi / Hinglish) → real 15-second MP4 → approval and export → labelled metrics → ranking with confidence intervals → 4 next variants → **social posts for LinkedIn, Instagram and X** → **scheduling and manual publishing with posting-time intelligence** → everything learned is written to **Meko** shared memory, one datapack per brand. Gemini live with fallbacks and an offline generator. 43 automated tests pass.
+
+### What it does, in one minute
+1. **Learns a brand** from its website (or manual facts): products, tone, approved claims with their source, and the claims it must *not* make.
+2. **Plans and creates**: a strategy, five distinct ad concepts and a real MP4 video ad, plus ready-to-post LinkedIn, Instagram and X content.
+3. **Launches honestly**: you approve, schedule and export. AdPilot suggests the best time to post and opens the platform with your text filled in. It never posts or spends money by itself.
+4. **Measures and learns**: results (simulated, CSV or entered by hand, always labelled) feed a ranking with confidence intervals, new variants and a posting-time model. What it learns is stored in Meko and used for the next campaign.
 
 ### Progress at a glance
 | Area | State |
@@ -12,25 +17,29 @@ AdPilot AI learns a brand once, then plans, creates, launches and improves its c
 | Website extraction (JSON-LD, Open Graph, Shopify feed, SSRF guard, hidden-text stripping) | ✅ Done |
 | Brand Memory (claim grounding, audience hypotheses, unknowns, brand colours) | ✅ Done |
 | Strategist (6 objectives) · Ad generator (5 concepts) · Claim guard · Platform copy | ✅ Done |
-| FastAPI app (20 endpoints) + tests (`pytest -q`, 15 passing) | ✅ Done |
-| Frontend mock data from real API responses (`sample_data/fixtures/`) | ✅ Done |
-| Meko shared agent memory (datapack per brand, memories, context search, conversation traces) | ✅ Live |
-| MP4 video ad renderer (9:16 / 1:1 / 4:5, ~7–9 s per 15 s video) + export ZIP + backup video | ✅ Done |
-| Metrics (simulated + CSV), Wilson intervals, P(best), sample-size gates, next-variant optimization, learnings → Brand Memory + Meko | ✅ Done |
-| Gemini (structured JSON, model fallback chain, circuit breaker, offline fallback) | ✅ Live |
-| Demo reset (`reset_demo`) and evaluation scorecard (`evaluate`, 14/14 pass) | ✅ Done |
-| Frontend workspace (React + TypeScript, 8 screens on the live API) | ✅ Connected, teammate polishing |
+| **Social posts** (LinkedIn, Instagram, X + thread; English / Hinglish / Hindi; claim-checked; edit, approve) | ✅ Done |
+| **Scheduling and manual publishing** (best-time suggestion, share-intent links, record results) | ✅ Done |
+| **Posting intelligence** (best day/time per platform, what content works, learned from past posts) | ✅ Done |
+| **Connected social accounts** (link X / LinkedIn / Instagram handles per brand) | ✅ Done (link only, no OAuth) |
+| **Meko shared memory** (datapack per brand: facts, learnings, posting patterns, recall) | ✅ Live |
+| **Demo history** for 3 brands, 8 weeks, clearly labelled synthetic (`seed_history`) | ✅ Done |
+| MP4 video ad renderer (5 styles, 9:16 / 1:1 / 4:5) + export ZIP + optional Pro AI-clip mode | ✅ Done |
+| Metrics (simulated + CSV), Wilson intervals, P(best), next-variant optimization | ✅ Done |
+| AI provider chain (Gemini → Groq / OpenRouter / Mistral / Cerebras / Ollama → offline) | ✅ Done |
+| Restart recovery, SQLite auto-migration, JSON 500s with CORS | ✅ Done |
+| Real posting through X / LinkedIn / Instagram APIs, real ad-platform connectors | 🟡 Designed, not connected |
 
 ### Screenshots
-Captured from the running app on the fictional demo store *Velvaa Skin* (offline generator, simulated metrics, labelled as such in the UI).
+Captured from the running app. The brand is the fictional *Velvaa Skin* (offline generator). The posting history shown is **synthetic demo data and is labelled that way in the app**.
 
 | | |
 |---|---|
-| ![Home](docs/screenshots/01-home.png) **Home:** all brands | ![Brand Memory](docs/screenshots/02-brand-memory.png) **Brand Memory:** profile, products, hidden-text warning |
-| ![Strategy](docs/screenshots/03-strategy.png) **Strategy:** segments, channel plan, 7-day calendar, "Not claimed" | ![Creatives](docs/screenshots/04-creatives.png) **Creatives:** editable copy, claim guard, approve / reject |
-| ![Launch](docs/screenshots/05-launch.png) **Launch:** approved creatives, export, locked channels | ![Performance](docs/screenshots/06-performance.png) **Performance:** simulated-data banner, KPIs, 95% intervals |
+| ![Home](docs/screenshots/01-home.png) **Home:** three demo brands, each with its own memory | ![Brand Memory](docs/screenshots/02-brand-memory.png) **Brand Memory:** profile, products, approved claims, warnings |
+| ![Strategy](docs/screenshots/03-strategy.png) **Strategy:** segments, channel plan, 7-day calendar, "Not claimed" | ![Ads](docs/screenshots/04-creatives-ads.png) **Creatives › Ads:** editable copy, claim guard, video, approve / reject |
+| ![Posts](docs/screenshots/05-creatives-posts.png) **Creatives › Social posts:** LinkedIn / Instagram / X, best-time suggestion, schedule, post | ![Launch](docs/screenshots/06-launch.png) **Launch:** approved creatives, export, publishing hub, linked accounts |
+| ![Performance](docs/screenshots/07-performance.png) **Performance:** social learning curve, learned posting times, ad results | |
 
-**The generated video**, four scenes (hook → product → benefits → call to action), rendered by Python and FFmpeg from the brand's real product image:
+**The generated videos:** one row per concept type (problem, demo, storytelling, offer, customer-voice). Each type has its own look, the real product photo is on screen from the first seconds, and every scene keeps moving (drifting light, floating product, shine sweep, pop-in text, progress bar). Rendered by Python and FFmpeg from the brand's own product images; if the site has no usable photo the video uses a clearly plain brand tile (never a fake product drawing) and the API flags `needs_product_image`:
 
 ![Video frames](docs/screenshots/07-video-frames.png)
 
@@ -51,11 +60,12 @@ Captured from the running app on the fictional demo store *Velvaa Skin* (offline
 12. [Tech stack](#12-tech-stack)
 13. [Repository layout](#13-repository-layout)
 14. [API overview](#14-api-overview)
-15. [Team, ownership and 24-hour plan](#15-team-ownership-and-24-hour-plan)
-16. [Demo script](#16-demo-script)
-17. [Risks and mitigations](#17-risks-and-mitigations)
-18. [Long-term roadmap](#18-long-term-roadmap)
-19. [Getting started](#19-getting-started)
+15. [Demo script (≈4 minutes)](#15-demo-script-4-minutes)
+16. [Risks and mitigations](#16-risks-and-mitigations)
+17. [Long-term roadmap](#17-long-term-roadmap)
+18. [Getting started](#18-getting-started)
+19. [Reliability and extra features](#19-reliability-and-extra-features)
+20. [Honest limits](#20-honest-limits)
 
 ---
 
@@ -131,6 +141,8 @@ Bold = part of the hackathon vertical slice.
 | Must 4 | **Real MP4 video ad** (9:16, about 15 s) rendered by Python, Pillow and FFmpeg | Working |
 | Must 5 | Campaign workspace: preview, edit, regenerate a field, approve or reject, download, export ZIP | Working |
 | Must 6 | Analytics on **clearly labelled** simulated or CSV data, plus AI-generated next variants with reasons | Working |
+| Must 7 | **Social posts** for LinkedIn, Instagram and X from any concept, with posting-time suggestions, scheduling, manual publishing and result tracking | Working |
+| Must 8 | **Meko memory per brand** that stores facts, learnings and posting patterns and is read back on the next generation | Working |
 | Stretch | Voiceover (TTS), AI background scenes, Hindi/Hinglish copy, 1:1 format, UTM builder, calendar view, image creatives | If time |
 | Roadmap | Real Google/Meta/Amazon integrations, competitor intelligence, budget assistant, unified assistant | Shown as designed but not connected |
 
@@ -176,7 +188,7 @@ flowchart LR
 ### Design decisions
 | Decision | Why |
 |---|---|
-| Modular monolith, not microservices | 2 people, 24 hours. Service boundaries live in code, not in infrastructure. |
+| Modular monolith, not microservices | One small codebase that is easy to run and change. Service boundaries live in code, not in infrastructure. |
 | SQLite + SQLModel with JSON columns | Zero setup. The schema can change during the hackathon. `DATABASE_URL` switches to Postgres. |
 | FastAPI `BackgroundTasks` for video jobs | No Redis or Celery needed. The job status lives in the `Asset` row. Can be swapped for a real queue later. |
 | LLM behind an adapter + offline fallback | The demo never depends on an API being up. Every output records `generation_mode`. |
@@ -327,6 +339,9 @@ How it's built:
 - `backend/app/services/meko_sync.py` runs the syncs as background jobs, so Meko never slows the UI. The result is stored in `brand.integrations.meko` (`status`, `datapack_id`, `conversations`, …).
 - Every call has a timeout. If Meko is unreachable, the app continues on local Brand Memory and shows the error on the Integrations page.
 - Differences from the public docs, found against the live server (Meko MCP 3.2.4, 42 tools): `conversation_id` is required by `datapack_create`, `memory_add`, `context_search` and `memory_promote`; `metadata` must be a JSON string; errors can arrive wrapped as `{"result": "<json>"}`.
+- **One datapack per brand** (named `AdPilot · <brand>`), so brands never mix. Ids are cached in `backend/.meko_datapacks.json` (git-ignored) so re-seeding reuses them. Free Meko plans cap the number of datapacks (10 when we tested); if you hit "datapack limit", delete unused datapacks in the Meko dashboard, or set `MEKO_DATAPACK_ID` to force one.
+- It also stores **posting patterns** (best times, what content works) and reads them back: post and concept generation search the brand's datapack first, and `GET /api/brands/{id}/memory?recall=true` shows what Meko recalls. The Performance page has a "Meko memory" card with the written counts.
+- More differences found on the live server: `datapack_list` needs a `conversation_id` and rejects `agent_id`. Calls to Meko are slow from some networks, so timeouts default to 20 s (45-60 s for writes) with one retry; raise `MEKO_TIMEOUT_S` if needed.
 - Verify any time: `python -m app.scripts.meko_check` (ends with `ALL CALLS OK`), or `POST /api/integrations/meko/test`.
 
 ---
@@ -354,16 +369,14 @@ adpilot-ai/
 ├── README.md                    ← you are here
 ├── docs/
 │   ├── screenshots/             ✅ app screenshots used in this README
-│   ├── API_CONTRACT.md          ← the handshake between frontend and backend (freeze at H1)
-│   ├── PLAN_ML_BACKEND.md       ← Aryan: intelligence layer, video, backend
-│   └── PLAN_FRONTEND.md         ← Teammate: UI/UX, demo storefront, pitch visuals
+│   └── API_CONTRACT.md          ← request/response shapes shared by frontend and backend
 ├── backend/
 │   ├── .env.example
 │   ├── requirements.txt
 │   ├── app/
 │   │   ├── main.py              ✅ FastAPI app, CORS, /files, /demo-store, routers, /api/health
 │   │   ├── config.py  db.py  models.py  serializers.py   ✅
-│   │   ├── api/                 ✅ common brands campaigns concepts assets analytics integrations
+│   │   ├── api/                 ✅ common brands campaigns concepts assets analytics integrations posts socials
 │   │   ├── schemas/             ✅ brand.py concept.py
 │   │   ├── services/
 │   │   │   ├── extractor.py         ✅ SSRF-safe fetch, JSON-LD/OG/Shopify parsing, hidden-text stripping
@@ -375,17 +388,19 @@ adpilot-ai/
 │   │   │   ├── text_utils.py        ✅ similarity, trimming helpers
 │   │   │   ├── meko_memory.py       ✅ Meko MCP client (memories, context search, traces)
 │   │   │   ├── meko_sync.py         ✅ background Meko sync jobs
+│   │   │   ├── social_posts.py      ✅ LinkedIn / Instagram / X post generation + claim guard
+│   │   │   ├── posting_insights.py  ✅ best day/time per platform, content patterns, next slots
 │   │   │   ├── video_service.py     ✅ Pillow/FFmpeg renderer: real product image, 4 animated scenes
 │   │   │   ├── video_jobs.py        ✅ background render job: queued → rendering → ready / failed
 │   │   │   ├── export_service.py    ✅ ZIP export (copy CSV, strategy, concepts, videos, README)
 │   │   │   ├── metrics_calculator.py ✅ CTR/CVR/CPC/CPA/ROAS, simulated data, CSV import
 │   │   │   ├── concept_ranker.py    ✅ Wilson CI, P(best), sample-size gates, winner rule
 │   │   │   ├── iteration_policy.py  ✅ 75% exploit / 25% explore plan, insight, limitations, learnings
-│   │   ├── scripts/             ✅ reset_demo.py evaluate.py meko_check.py gemini_check.py gemini_ping.py make_demo_images.py export_fixtures.py
+│   │   ├── scripts/             ✅ reset_demo.py seed_history.py evaluate.py meko_check.py gemini_check.py gemini_ping.py make_demo_images.py export_fixtures.py
 │   │   └── assets/fonts/        ✅ Poppins, Lora (SIL Open Font License)
-│   └── tests/                   ✅ conftest.py test_api_flow.py test_video_export.py test_analytics.py test_eval.py (15 tests)
+│   └── tests/                   ✅ conftest.py test_api_flow.py test_video_export.py test_analytics.py test_eval.py test_ai_clip.py test_llm_providers.py test_resilience.py test_posts.py test_publishing.py (43 tests)
 ├── frontend/
-│   └── src/  pages/ (Home, NewBrand, BrandMemory, Campaigns, campaign/{Strategy,Creatives,Launch,Performance}) components/ lib/api.ts lib/types.ts   ✅ React 18 + TypeScript + Vite + Tailwind + TanStack Query + Recharts
+│   └── src/  pages/ (Home, NewBrand, BrandMemory, Campaigns, campaign/{Strategy,Creatives,Launch,Performance}) components/ (SocialPosts, PublishPanel, PostsHub, ConnectedAccounts, PostingInsights, SocialPerformance, ...) lib/api.ts lib/types.ts   ✅ React 18 + TypeScript + Vite + Tailwind + TanStack Query + Recharts
 └── sample_data/
     ├── demo_store/              fictional Indian skincare storefront (offline-safe demo URL)
     ├── fixtures/                real backend responses for frontend mocks
@@ -421,44 +436,23 @@ The full request/response shapes and TypeScript types are in **[docs/API_CONTRAC
 | GET | `/api/integrations` | Honest provider statuses (Meko status is live) |
 | POST | `/api/integrations/meko/test` | Live round-trip to Meko: tool count + datapacks |
 | GET | `/api/concepts/{id}` | One concept with its latest video |
+| GET | `/api/concepts/{id}/video-options` | Standard vs **Pro - AI video** (Pro needs an attached clip) |
+| POST / DELETE | `/api/concepts/{id}/ai-clip` | Attach / remove an AI-generated clip for Pro mode |
+| POST | `/api/concepts/{id}/posts/generate` | LinkedIn, Instagram and X post drafts |
+| GET | `/api/campaigns/{id}/posts` | All posts for a campaign |
+| PATCH / POST / DELETE | `/api/posts/{id}`, `/regenerate` | Edit, approve, regenerate or delete a post |
+| POST / DELETE | `/api/posts/{id}/schedule` | Schedule (or unschedule) an approved post |
+| POST | `/api/posts/{id}/publish` | Record a publish: `manual_share` (you pressed Post) or `simulated` |
+| POST | `/api/posts/{id}/metrics` | Enter real results for a published post (labelled `manual`) |
+| POST | `/api/campaigns/{id}/posts/simulate-engagement` | Labelled simulated engagement for the demo |
+| GET | `/api/brands/{id}/posts`, `/posting-insights` | All posts for a brand; best times and what content works |
+| GET | `/api/brands/{id}/memory?recall=` | What is stored in Meko; `recall=true` runs a live search |
+| GET / PUT / DELETE | `/api/brands/{id}/socials[/{platform}]` | Link, list or unlink the brand's X / LinkedIn / Instagram accounts |
 
-Built so far: health, brands (analyze, list, get, patch, uploads), campaigns (create, list, get, patch, **export**), concepts (generate, get, patch, regenerate, **video**), assets (get, list), integrations (list, Meko test). Plus analytics: metrics/simulate, metrics (CSV upload), analytics, iterate.
-
----
-
-## 15. Team, ownership and 24-hour plan
-
-| Person | Track | Detailed plan |
-|---|---|---|
-| **Aryan** | ML, intelligence layer and backend: extraction, LLM, prompts, validation, strategy, concepts, **video pipeline**, metrics, ranking, iteration, API, tests | [docs/PLAN_ML_BACKEND.md](docs/PLAN_ML_BACKEND.md) |
-| **Teammate** | Frontend UI/UX: design system, all workspace screens, states and polling, charts, demo storefront page, pitch visuals | [docs/PLAN_FRONTEND.md](docs/PLAN_FRONTEND.md) |
-
-**How the two tracks never block each other:** the API contract is frozen at H1. The frontend was built against fixtures of real API responses (`sample_data/fixtures/`) and now runs on the live API.
-
-**Clock:** started Sat 31 Oct 13:15 IST → **ends Sun 1 Nov 11:59 IST** (≈22 h 45 m). **Submit by 11:30**: never at the last minute.
-
-| Time (IST) | Aryan (ML/Backend) | Teammate (Frontend) | Sync point |
-|---|---|---|---|
-| **Sat 13:15–14:00** | Contract walkthrough, `.env`, Gemini key test, FFmpeg check | Vite + Tailwind + router scaffold, design tokens | **🔒 Contract freeze 14:00** |
-| 14:00–18:00 | LLM adapter, brand analyzer, strategist, concept generator + claim guard | App shell, component kit, Onboarding, Brand Workspace, Strategist (mocks) | — |
-| **18:00** | Real fixtures for brand/strategy/concepts | Switch those screens to the live API | **🔁 Sync 1** |
-| 18:00–23:00 | Video pipeline + jobs, edit/approve/regenerate, export ZIP, backup MP4 | Creative Studio (video, polling, editing), Campaign Manager | 🍽️ dinner ~20:30 (30 min) |
-| **23:00** | Video endpoint live | Creative Studio live | **🔁 Sync 2: first full demo run** |
-| Sun 23:00–03:00 | Metrics, ranker, iteration policy, analytics, learnings → memory | Analytics + Optimize, Integrations, Asset Library | — |
-| **03:00** | Analytics/iterate live | Analytics live | **🔁 Sync 3** |
-| 03:00–06:00 | ONE stretch goal (TTS voiceover or Hindi/Hinglish) + rest 04:30–06:00 | Overview, calendar, demo store polish + rest 03:00–04:30 | — |
-| **06:00** | | | **🧊 Feature freeze** |
-| 06:00–09:00 | Tests, eval scorecard, fallbacks, `reset_demo` | Bug bash, empty/error states, projector check | — |
-| 09:00–10:30 | Demo DB snapshot, backup MP4, architecture slide | Pitch deck, 2–3 min demo video recording | — |
-| 10:30–11:30 | Rehearse ×2, push final code, README check | Rehearse ×2, submission form | **📤 Submit by 11:30** |
-
-Rests are staggered so one person is always awake to keep things moving. Commit small and often to `main`, with feature branches only for risky work.
-
-> ⚠️ Check the HackCBS 9.0 rules on pre-written code. If code must be written during the event, treat this repo's early scaffold as planning material and re-create it on site, or declare it to the organisers.
 
 ---
 
-## 16. Demo script (≈4 minutes)
+## 15. Demo script (≈4 minutes)
 
 Demo brand: **Velvaa Skin**, a *fictional* Indian skincare brand served from `sample_data/demo_store` at `https://demo.adpilot.local/` (no internet needed).
 
@@ -469,13 +463,15 @@ Demo brand: **Velvaa Skin**, a *fictional* Indian skincare brand served from `sa
 5. Edit a headline, regenerate a hook, **approve** 3 concepts → campaign moves to *Approved* → **Export ZIP**.
 6. **Analytics:** load simulated data → the big **SIMULATED** banner → per-concept CVR with intervals and sample warnings.
 7. **Optimize:** next 4 variants, each with "changed: hook — because…", one marked *exploration*, and the limitations listed.
-8. Back in **Brand Memory**, the learnings now appear there. Close on the ecosystem slide.
+8. **Social posts:** open a concept's *Social posts* tab, write posts for LinkedIn, Instagram and X, note the **best time** suggestion with its reason, approve and schedule one. *Post on LinkedIn* opens the platform with the text filled in; *I posted it* records it. (*Simulate publish* is the labelled demo shortcut.)
+9. **Memory:** open *Performance*. The social learning curve, the learned best times and the Meko memory card show how each brand's history shapes the next post. Switch brand (Brew & Bloom, Threadline) and the patterns differ. The history is synthetic and labelled.
+10. Back in **Brand Memory**, the learnings now appear there. Close on the ecosystem slide.
 
 Have ready: the backup MP4, a pre-seeded database (`scripts/reset_demo`), and a screen recording.
 
 ---
 
-## 17. Risks and mitigations
+## 16. Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
@@ -484,13 +480,13 @@ Have ready: the backup MP4, a pre-seeded database (`scripts/reset_demo`), and a 
 | Site blocks scraping or needs JavaScript | Shopify JSON → JSON-LD → Open Graph → text → manual. Bundled demo store. |
 | Wi-Fi at venue | Everything runs locally. Offline LLM mode. Demo store needs no internet. |
 | Integration overreach | Export + adapter design. Honest status page. |
-| Scope creep | H18 feature freeze. Stretch goals only after Sync 3. |
+| Scope creep | One end-to-end workflow first. Extras only once the core loop is solid. |
 
 ---
 
-## 18. Long-term roadmap
+## 17. Long-term roadmap
 
-1. **Brand Sources** (Aryan's idea): attach several sites to one brand (D2C store, marketplaces, Instagram, catalogue PDF), each read separately, merged into one Brand Memory with per-source evidence and conflict flags
+1. **Brand Sources:** attach several sites to one brand (D2C store, marketplaces, Instagram, catalogue PDF), each read separately, merged into one Brand Memory with per-source evidence and conflict flags
 2. Brand Safety & Compliance Checker as a full module (platform policy packs, ASCI rules)
 2. Localization engine (Hindi, Hinglish, Tamil, Bengali; regional voiceover)
 3. UTM & attribution assistant
@@ -504,7 +500,7 @@ Have ready: the backup MP4, a pre-seeded database (`scripts/reset_demo`), and a 
 
 ---
 
-## 19. Getting started
+## 18. Getting started
 
 ```bash
 # backend
@@ -515,13 +511,18 @@ cp .env.example .env            # Windows: copy .env.example .env
 #   GEMINI_API_KEY=...  optional; offline mode works without it
 #   MEKO_API_KEY=...    from cloud.mekodata.ai → Settings → API Keys
 #   GEMINI_MODEL=gemini-flash-lite-latest is the default; fallbacks are tried automatically
+#   Backup AI providers (optional, free keys): GROQ_API_KEY, OPENROUTER_API_KEY, MISTRAL_API_KEY, or a local
+#   Ollama (OLLAMA_MODEL=llama3.1:8b). If Gemini is down or out of quota, the next provider answers
+#   automatically; if all are down, the offline generator still works. See GET /api/health -> providers.
 # FFmpeg: installed automatically as a pip package (imageio-ffmpeg). A system FFmpeg is used if present.
 #   Check: open http://localhost:8000/api/health and look for "ffmpeg": true
-pytest -q                          # 15 passed (offline, never uses your real keys)
+pytest -q                          # 43 passed (offline, never uses your real keys)
 python -m app.scripts.meko_check   # ends with ALL CALLS OK when Meko is configured
 python -m app.scripts.gemini_check # ends with GEMINI OK when Gemini is configured
 python -m app.scripts.evaluate     # scorecard: 14/14 checks, saved to sample_data/fixtures/eval_scorecard.json
 python -m app.scripts.reset_demo   # wipes the DB and rebuilds the Velvaa demo (add --offline or --no-video)
+python -m app.scripts.seed_history # wipes the DB, builds 3 brands with 8 weeks of SYNTHETIC history, writes it to Meko
+                                   #   --no-meko skips Meko (fast, offline); --gemini uses the real model for the past concepts
 uvicorn app.main:app --reload --port 8000
 
 # frontend
@@ -535,8 +536,32 @@ API docs are auto-generated at `http://localhost:8000/docs`.
 
 **Try it in 60 seconds:** open `/docs` → `POST /api/brands/analyze` with `{"url": "https://demo.adpilot.local/"}` → `POST /api/campaigns` with `{"brand_id": 1, "objective": "sales"}` → `POST /api/campaigns/1/concepts/generate` → `POST /api/concepts/1/video` → poll `GET /api/assets/1` until `ready`, then open its `url` in the browser → `PATCH /api/concepts/1` with `{"status": "approved"}` → `GET /api/campaigns/1/export` downloads the ZIP → `POST /api/campaigns/1/metrics/simulate` → `GET /api/campaigns/1/analytics` → `POST /api/campaigns/1/iterate` (4 new variants + learnings). A few seconds after analyzing, `GET /api/brands/1` shows `integrations.meko.status = "synced"`.
 
-> If you pulled a newer version and the server errors with "no such column", delete `backend/adpilot.db`; it is recreated on start (the schema is still changing during the hackathon).
+> New nullable columns are added to an existing SQLite database automatically on start. If something still looks inconsistent, delete `backend/adpilot.db`; it is recreated on start.
 
 **Using the app:** start the backend (port 8000) and the frontend (port 5173), open `http://localhost:5173`, click **Add a brand**, paste `https://demo.adpilot.local/`, then Campaigns → New campaign → Creatives → Generate. In the sidebar footer, "LLM" shows whether Gemini or the offline generator is writing.
 
 **Fixtures:** the JSON files in `sample_data/fixtures/` are real API responses (useful for UI work without a running backend). `sample_data/backup_video.mp4` is the demo backup video.
+
+
+---
+
+## 19. Reliability and extra features
+
+- **AI provider chain.** Gemini first, then any configured OpenAI-compatible provider (Groq, OpenRouter, Mistral, Cerebras, a local Ollama, or a custom endpoint), then the offline generator. Each provider has its own circuit breaker, and the provider that answered is shown as the `generation_mode`.
+- **Restart recovery.** On startup, renders left "queued/rendering" by a crash are marked failed (the UI offers retry), half-created brands are removed, and a stuck Meko sync is reset. SQLite runs in WAL mode with a 30 s lock wait, and any unexpected error returns a JSON 500 that still carries CORS headers.
+- **Social posts.** One click turns a concept into a LinkedIn post, an Instagram caption (with reel/carousel idea) and an X post plus 3-post thread. Same claim guard, platform limits, edit/approve flow and export as ad copy. Drafts only.
+- **Pro - AI video.** An optional second video mode that puts the verified copy and CTA over an AI-generated clip attached to the concept. Standard video stays the default.
+- **Posting intelligence.** From a brand's published posts it computes engagement (likes + 2×comments + 3×shares + clicks, over impressions) per weekday and part of the day in IST, shrinks thin cells toward the platform average, and reports the best slots, what content type and hook style works, and a plain-language summary. These feed the post prompt and the suggested time, and are written to Meko only when they change.
+- **Synthetic demo history.** `seed_history` builds Velvaa Skin, Brew & Bloom and Threadline, each with 4 past campaigns, approvals, simulated ad metrics, optimization learnings and 72 published posts. Each brand has hidden audience habits (for example a different best slot per platform) that the insights engine has to rediscover from the data, so the learning is real even though the data is not. Everything is labelled `synthetic_history` in the database, the UI and Meko.
+- **Connected accounts.** Link a brand's X, LinkedIn and Instagram handles. They are used for "Posting as @handle" and profile links.
+
+---
+
+## 20. Honest limits
+
+- **AdPilot does not post for you.** Publishing is "you press Post on the platform": we open X or LinkedIn with your text filled in (Instagram can't be pre-filled, so the caption is copied), then you confirm. *Simulate publish* records a demo publish and is labelled. Real posting through the X, LinkedIn and Instagram APIs needs each platform's developer-app approval, so those adapters are designed but not connected.
+- **Linking an account is not logging in.** It stores a handle and profile link only.
+- **Demo data is synthetic.** The 8-week history and its engagement numbers were generated for the demo, and are labelled so in the database, the UI and Meko. Ad metrics are simulated or imported from CSV, never fetched from an ad platform.
+- **Posting times are statistics, not promises.** Cells with few posts are marked low-confidence, and the app shows how many posts each suggestion rests on.
+- **Meko needs a key and a network that reaches it.** Without `MEKO_API_KEY` the app runs on local Brand Memory and says "Not connected".
+- **No real spend.** Nothing is published and no money is spent without explicit approval, and the MVP never spends money at all.

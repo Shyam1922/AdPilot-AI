@@ -1,6 +1,7 @@
 // Copied from docs/API_CONTRACT.md — the frozen frontend ↔ backend handshake.
 
-export type GenerationMode = "gemini" | "offline";
+// "offline" or the AI provider that wrote it ("gemini", "groq", "openrouter", ...). Treat unknown names as text.
+export type GenerationMode = string;
 export type CampaignStatus =
   | "draft"
   | "generated"
@@ -176,7 +177,7 @@ export interface Asset {
   campaign_id: number;
   concept_id: number | null;
   brand_id: number | null;
-  kind: "video" | "image" | "upload";
+  kind: "video" | "image" | "upload" | "ai_clip";
   fmt: string;
   url: string | null;
   status: AssetStatus;
@@ -188,6 +189,9 @@ export interface Asset {
     width?: number;
     height?: number;
     render_ms?: number;
+    mode?: "motion" | "ai_clip";
+    ai_clip?: string | boolean;
+    style?: string;
   };
   created_at: string;
   updated_at: string;
@@ -292,16 +296,91 @@ export interface Iteration {
 export interface IntegrationStatus {
   provider: string;
   label: string;
-  status: "working" | "export_only" | "simulated" | "not_connected";
+  status: "working" | "export_only" | "simulated" | "not_connected" | "connected" | "error";
   notes: string;
   docs_url: string;
 }
 
+export interface ProviderStatus {
+  name: string;
+  configured: boolean;
+  model: string;
+  ready: boolean;
+  paused_for_s: number;
+  reason: string;
+}
+
 export interface Health {
-  status: "ok";
+  status: "ok" | "degraded";
+  database?: boolean;
   llm_provider: GenerationMode;
+  providers?: ProviderStatus[];
   ffmpeg: boolean;
   demo_store_url: string;
+}
+
+/* ---- video modes (Standard / Pro) ---- */
+
+export type VideoMode = "motion" | "ai_clip";
+
+export interface VideoOption {
+  mode: VideoMode;
+  label: string;
+  tier: "standard" | "pro";
+  available: boolean;
+  has_clip?: boolean;
+  description: string;
+  needs?: string | null;
+}
+
+/* ---- social posts (LinkedIn / Instagram / X) ---- */
+
+export type SocialPlatform = "linkedin" | "instagram" | "x";
+
+export type PostStatus = "generated" | "approved" | "rejected" | "scheduled" | "published";
+
+export interface PostMetrics {
+  impressions?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  clicks?: number;
+}
+
+export interface PostSuggestion {
+  at: string;
+  label: string;
+  reason: string;
+  basis?: "history" | "default";
+}
+
+export interface SocialPost {
+  id: number;
+  campaign_id: number;
+  concept_id: number;
+  platform: SocialPlatform;
+  hook: string;
+  text: string;
+  hashtags: string[];
+  thread: string[];
+  visual_idea: string;
+  cta: string;
+  risk_flags: RiskFlag[];
+  status: PostStatus;
+  edited: boolean;
+  generation_mode: GenerationMode;
+  scheduled_at: string | null;
+  published_at: string | null;
+  publish_mode: "" | "manual_share" | "simulated" | "synthetic_history";
+  external_url: string;
+  metrics: PostMetrics;
+  metrics_source: "" | "manual" | "simulated" | "synthetic_history";
+  engagement_rate: number | null;
+  suggested?: PostSuggestion | null;
+  char_count: number;
+  char_limit: number;
+  created_at: string;
+  updated_at: string;
 }
 
 /* ---- request bodies (mirror backend/app/schemas) ---- */
@@ -348,4 +427,61 @@ export interface ConceptUpdate {
   headline?: string;
   cta?: string;
   target_segment?: string;
+}
+
+/* ---- posting intelligence (best times, what the audience likes) ---- */
+
+export interface PostingSlot {
+  weekday: string;
+  hour: number;
+  daypart: string;
+  rate: number | null;
+  n: number;
+  confidence: string;
+}
+
+export interface PlatformInsight {
+  posts: number;
+  avg_rate: number;
+  best_slots: PostingSlot[];
+  heatmap: (number | null)[][];   // 7 weekdays (Mon..Sun) x dayparts
+  dayparts?: string[];
+}
+
+export interface InsightGroup {
+  label: string;
+  rate: number;
+  n: number;
+}
+
+export interface PostingInsights {
+  posts_analyzed: number;
+  sources: string[];
+  basis: "history" | "default";
+  avg_engagement_rate: number;
+  platforms: Record<SocialPlatform, PlatformInsight>;
+  content: { by_concept_type: InsightGroup[]; by_hook_style: InsightGroup[]; by_length: InsightGroup[] };
+  preferences: string[];
+  next_slots: Record<SocialPlatform, PostSuggestion>;
+}
+
+export interface BrandMemoryView {
+  configured: boolean;
+  datapack_id: string | null;
+  status: string;
+  written: { brand_facts: number; learnings: number; posting_patterns: number; conversations: number };
+  synthetic_history: { weeks: number; campaigns: number; posts: number; note: string } | null;
+  recalled: Record<string, string>;
+  local_learnings: unknown;
+}
+
+export interface SocialAccount {
+  platform: SocialPlatform;
+  label: string;
+  connected: boolean;
+  handle: string;
+  url: string;
+  connected_at: string | null;
+  publishing: "manual_share";
+  note: string;
 }

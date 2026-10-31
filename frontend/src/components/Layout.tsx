@@ -51,7 +51,7 @@ export default function Layout() {
 
       <footer className="border-t border-white/[0.08]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-5 text-xs text-muted sm:px-6">
-          <StatusRow ok={health.data?.llm_provider === "gemini"} label={health.data ? (health.data.llm_provider === "gemini" ? "Gemini" : "Offline generator") : "…"} prefix="LLM" />
+          <StatusRow ok={!!health.data && health.data.llm_provider !== "offline"} label={health.data ? (health.data.llm_provider === "offline" ? "Offline generator" : health.data.llm_provider.replace(/^\w/, (c) => c.toUpperCase())) : "…"} prefix="LLM" />
           <StatusRow ok={!!health.data?.ffmpeg} label={health.data ? (health.data.ffmpeg ? "FFmpeg ready" : "FFmpeg missing") : "…"} prefix="Video" />
           <span className="w-full sm:ml-auto sm:w-auto">Nothing is published and no money is spent without your approval.</span>
         </div>

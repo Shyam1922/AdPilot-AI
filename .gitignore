@@ -10,3 +10,5 @@ dist/
 *.pyc
 backend/.env
 frontend/.env
+
+backend/.meko_datapacks.json

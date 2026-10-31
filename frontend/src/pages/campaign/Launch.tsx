@@ -6,6 +6,9 @@ import { cn } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { Card, EmptyState, ErrorState, Skeleton, Spinner } from "@/components/ui";
 import type { CampaignStatus, IntegrationStatus } from "@/lib/types";
+import ConnectedAccounts from "@/components/ConnectedAccounts";
+import PostsHub from "@/components/PostsHub";
+import { PostingInsightsCard } from "@/components/PostingInsights";
 import { useCampaign } from "../Campaign";
 
 const STEPS: { key: CampaignStatus; label: string }[] = [
@@ -21,7 +24,10 @@ const INTEGRATION: Record<IntegrationStatus["status"], { label: string; cls: str
   export_only: { label: "Export only", cls: "text-body" },
   simulated: { label: "Simulated", cls: "text-amber-300" },
   not_connected: { label: "Not connected", cls: "text-muted" },
+  connected: { label: "Connected", cls: "text-success" },
+  error: { label: "Error", cls: "text-danger" },
 };
+const FALLBACK = { label: "Unknown", cls: "text-muted" };
 
 export default function Launch() {
   const { detail, base } = useCampaign();
@@ -81,7 +87,7 @@ export default function Launch() {
         </div>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card title={`Approved creatives · ${approved.length}`}>
           {approved.length === 0 ? (
             <EmptyState
@@ -131,6 +137,14 @@ export default function Launch() {
 
         <Integrations />
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PostsHub campaignId={c.id} brandId={c.brand_id} base={base} />
+        <div className="space-y-6">
+          <ConnectedAccounts brandId={c.brand_id} />
+          <PostingInsightsCard brandId={c.brand_id} withHeatmap={false} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -144,7 +158,7 @@ function Integrations() {
       {data && (
         <ul className="space-y-4">
           {data.map((it) => {
-            const s = INTEGRATION[it.status];
+            const s = INTEGRATION[it.status] ?? FALLBACK;
             return (
               <li key={it.provider}>
                 <div className="flex items-center justify-between gap-3">

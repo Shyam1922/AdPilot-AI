@@ -8,6 +8,8 @@ import { cn, inr, mult, num, pct } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { Card, EmptyState, ErrorState, ModeBadge, Skeleton, SourceBadge, Spinner } from "@/components/ui";
 import type { Analytics, Iteration, SampleStatus } from "@/lib/types";
+import SocialPerformance from "@/components/SocialPerformance";
+import { MemoryCard, PostingInsightsCard } from "@/components/PostingInsights";
 import { useCampaign } from "../Campaign";
 
 const SAMPLE: Record<SampleStatus, { label: string; color: string }> = {
@@ -29,23 +31,32 @@ export default function Performance() {
   const id = detail.campaign.id;
   const analytics = useQuery({ queryKey: ["analytics", id], queryFn: () => api.getAnalytics(id), enabled: detail.has_metrics });
 
-  if (!detail.has_metrics) {
-    return (
-      <EmptyState
-        icon={<Database className="h-7 w-7" />}
-        title="No performance data yet"
-        hint="Import results from your ad accounts as CSV, or load clearly labelled simulated data to try the optimization loop."
-        action={<DataActions campaignId={id} primary />}
-      />
-    );
-  }
-  if (analytics.isLoading) return <Skeleton className="h-96" />;
-  if (analytics.error || !analytics.data) return <ErrorState error={analytics.error} onRetry={() => analytics.refetch()} />;
-
+  const brandId = detail.campaign.brand_id;
   return (
     <div className="space-y-6">
-      <Overview a={analytics.data} />
-      <Optimization iterations={detail.iterations} campaignId={id} />
+      <SocialPerformance brandId={brandId} campaignId={id} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PostingInsightsCard brandId={brandId} />
+        <MemoryCard brandId={brandId} />
+      </div>
+      <h2 className="display pt-2 text-xl">Ad performance</h2>
+      {!detail.has_metrics ? (
+        <EmptyState
+          icon={<Database className="h-7 w-7" />}
+          title="No ad results yet"
+          hint="Import results from your ad accounts as CSV, or load clearly labelled simulated data to try the optimization loop."
+          action={<DataActions campaignId={id} primary />}
+        />
+      ) : analytics.isLoading ? (
+        <Skeleton className="h-96" />
+      ) : analytics.error || !analytics.data ? (
+        <ErrorState error={analytics.error} onRetry={() => analytics.refetch()} />
+      ) : (
+        <>
+          <Overview a={analytics.data} />
+          <Optimization iterations={detail.iterations} campaignId={id} />
+        </>
+      )}
     </div>
   );
 }

@@ -5,9 +5,7 @@
     "name": "Sales · Velvaa Saffron Dew Serum",
     "objective": "sales",
     "channels": [
-      "instagram",
-      "meta_ads",
-      "google_ads"
+      "instagram"
     ],
     "product_focus": "Velvaa Saffron Dew Serum",
     "audience_note": "",
@@ -62,22 +60,6 @@
             "Feed 4:5",
             "Stories"
           ]
-        },
-        {
-          "channel": "meta_ads",
-          "role": "Paid reach and retargeting",
-          "formats": [
-            "Reels ads 9:16",
-            "Feed ads 4:5"
-          ]
-        },
-        {
-          "channel": "google_ads",
-          "role": "Capture people already searching",
-          "formats": [
-            "Responsive search ads",
-            "Performance Max (later)"
-          ]
         }
       ],
       "ctas": [
@@ -94,13 +76,13 @@
         },
         {
           "day": 2,
-          "channel": "meta_ads",
+          "channel": "instagram",
           "content": "Demo creative for Saffron Dew Serum",
           "concept_type": "demo"
         },
         {
           "day": 3,
-          "channel": "google_ads",
+          "channel": "instagram",
           "content": "Storytelling creative for Saffron Dew Serum",
           "concept_type": "storytelling"
         },
@@ -112,13 +94,13 @@
         },
         {
           "day": 5,
-          "channel": "meta_ads",
+          "channel": "instagram",
           "content": "Testimonial style creative for Saffron Dew Serum",
           "concept_type": "testimonial-style"
         },
         {
           "day": 6,
-          "channel": "google_ads",
+          "channel": "instagram",
           "content": "Demo creative for Saffron Dew Serum",
           "concept_type": "demo"
         },
@@ -145,10 +127,10 @@
     "counts": {
       "concepts": 5,
       "approved": 1,
-      "videos_ready": 0
+      "videos_ready": 1
     },
-    "created_at": "2026-10-31T08:19:53.913366+00:00",
-    "updated_at": "2026-10-31T08:19:53.934551+00:00"
+    "created_at": "2026-10-31T09:12:25.651258+00:00",
+    "updated_at": "2026-10-31T09:12:25.678814+00:00"
   },
   "concepts": [
     {
@@ -249,9 +231,33 @@
       "edited": false,
       "generation_mode": "offline",
       "prompt_version": "concepts-v1",
-      "latest_video": null,
-      "created_at": "2026-10-31T08:19:53.933118+00:00",
-      "updated_at": "2026-10-31T08:19:53.953357+00:00"
+      "latest_video": {
+        "id": 1,
+        "campaign_id": 1,
+        "concept_id": 1,
+        "brand_id": 1,
+        "kind": "video",
+        "fmt": "9:16",
+        "url": "/files/brand_1/videos/concept_1_v1.mp4",
+        "status": "ready",
+        "progress": 1.0,
+        "generation_mode": "template",
+        "error": "",
+        "meta": {
+          "duration_s": 15.0,
+          "width": 1080,
+          "height": 1920,
+          "fps": 30,
+          "frames": 450,
+          "render_ms": 6908,
+          "music": false,
+          "product_image": "product_1.png"
+        },
+        "created_at": "2026-10-31T09:12:25.702637+00:00",
+        "updated_at": "2026-10-31T09:12:32.748554+00:00"
+      },
+      "created_at": "2026-10-31T09:12:25.677623+00:00",
+      "updated_at": "2026-10-31T09:12:32.761600+00:00"
     },
     {
       "id": 2,
@@ -352,8 +358,8 @@
       "generation_mode": "offline",
       "prompt_version": "concepts-v1",
       "latest_video": null,
-      "created_at": "2026-10-31T08:19:53.933615+00:00",
-      "updated_at": "2026-10-31T08:19:53.933625+00:00"
+      "created_at": "2026-10-31T09:12:25.678047+00:00",
+      "updated_at": "2026-10-31T09:12:25.678057+00:00"
     },
     {
       "id": 3,
@@ -454,8 +460,8 @@
       "generation_mode": "offline",
       "prompt_version": "concepts-v1",
       "latest_video": null,
-      "created_at": "2026-10-31T08:19:53.933935+00:00",
-      "updated_at": "2026-10-31T08:19:53.933949+00:00"
+      "created_at": "2026-10-31T09:12:25.678301+00:00",
+      "updated_at": "2026-10-31T09:12:25.678310+00:00"
     },
     {
       "id": 4,
@@ -556,8 +562,8 @@
       "generation_mode": "offline",
       "prompt_version": "concepts-v1",
       "latest_video": null,
-      "created_at": "2026-10-31T08:19:53.934189+00:00",
-      "updated_at": "2026-10-31T08:19:53.934197+00:00"
+      "created_at": "2026-10-31T09:12:25.678526+00:00",
+      "updated_at": "2026-10-31T09:12:25.678535+00:00"
     },
     {
       "id": 5,
@@ -664,11 +670,37 @@
       "generation_mode": "offline",
       "prompt_version": "concepts-v1",
       "latest_video": null,
-      "created_at": "2026-10-31T08:19:53.934462+00:00",
-      "updated_at": "2026-10-31T08:19:53.934470+00:00"
+      "created_at": "2026-10-31T09:12:25.678731+00:00",
+      "updated_at": "2026-10-31T09:12:25.678738+00:00"
     }
   ],
-  "assets": [],
+  "assets": [
+    {
+      "id": 1,
+      "campaign_id": 1,
+      "concept_id": 1,
+      "brand_id": 1,
+      "kind": "video",
+      "fmt": "9:16",
+      "url": "/files/brand_1/videos/concept_1_v1.mp4",
+      "status": "ready",
+      "progress": 1.0,
+      "generation_mode": "template",
+      "error": "",
+      "meta": {
+        "duration_s": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30,
+        "frames": 450,
+        "render_ms": 6908,
+        "music": false,
+        "product_image": "product_1.png"
+      },
+      "created_at": "2026-10-31T09:12:25.702637+00:00",
+      "updated_at": "2026-10-31T09:12:32.748554+00:00"
+    }
+  ],
   "iterations": [],
   "has_metrics": false
 }

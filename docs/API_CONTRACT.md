@@ -1,6 +1,6 @@
 # API Contract: frontend ↔ backend
 
-**Freeze at H1.** After the freeze, any change needs both people to agree and must be updated here *first*.
+Keep this file in step with the code: update it first when an endpoint or type changes.
 Base URL: `VITE_API_URL` (default `http://localhost:8000`). All bodies are JSON unless marked `multipart`. Files are served from `GET /files/<path>`.
 
 ## Conventions
@@ -110,10 +110,12 @@ export interface ConceptPerformance {
   ctr: number | null; cvr: number | null; cpc: number | null; cpa: number | null; roas: number | null;
   primary_value: number | null; ci_low: number | null; ci_high: number | null;
   sample_status: SampleStatus; p_best: number | null;
+  rank: number; hook: string; parent_concept_id: number | null;   // added in G3
 }
 
 export interface Analytics {
-  campaign_id: number; objective_metric: "ctr" | "cvr" | "roas"; objective_metric_note: string;
+  campaign_id: number; objective: Objective; objective_metric: "ctr" | "cvr"; objective_metric_note: string;
+  clear_winner: boolean;   // true only if the leader's 95% interval clears the runner-up's
   is_simulated: boolean; data_sources: SourceType[];
   totals: Omit<ConceptPerformance, "concept_id" | "label" | "concept_type" | "is_exploration" | "primary_value" | "ci_low" | "ci_high" | "sample_status" | "p_best">;
   by_concept: ConceptPerformance[];
@@ -138,7 +140,7 @@ export interface IntegrationStatus { provider: string; label: string; status: "w
 
 | Method & path | Request | Response | Notes |
 |---|---|---|---|
-| `GET /api/health` | — | `{ status: "ok", llm_provider: GenerationMode, ffmpeg: boolean, demo_store_url: string }` | Show the LLM mode in the top bar |
+| `GET /api/health` | — | `{ status: "ok" \| "degraded", database: boolean, llm_provider: string, providers: { name, configured, model, ready, paused_for_s, reason }[], ffmpeg: boolean, demo_store_url: string }` | `llm_provider` = the provider that would answer next (`gemini`, `groq`, `openrouter`, `mistral`, `cerebras`, `ollama`, `custom`, or `offline`). `generation_mode` on any AI output is that same name, so render unknown names as plain text. |
 | `POST /api/brands/analyze` | `{ url?: string, manual?: { brand_name?, product_name?, product_description?, target_audience?, price_range?, tone?, key_features?: string[], claims_to_avoid?: string[] } }` | `Brand` | 5–25 s. Needs URL **or** manual brand_name. 422 on invalid URL, 400 with `detail` if extraction fails *and* there's no manual data. |
 | `GET /api/brands` | — | `Brand[]` | |
 | `GET /api/brands/{id}` | — | `Brand` | |
@@ -151,7 +153,27 @@ export interface IntegrationStatus { provider: string; label: string; status: "w
 | `POST /api/campaigns/{id}/concepts/generate` | `{ count?: 5, language?: "en" \| "hi" \| "hinglish" }` | `Concept[]` | Adds to the campaign |
 | `PATCH /api/concepts/{id}` | `{ status?, hook?, primary_text?, headline?, cta?, target_segment? }` | `Concept` | Copy edits re-run the claim guard → updated `risk_flags` |
 | `POST /api/concepts/{id}/regenerate` | `{ field: "hook" \| "headline" \| "cta" \| "primary_text" }` | `Concept` | |
-| `POST /api/concepts/{id}/video` | `{ format?: "9:16" \| "1:1", voiceover?: false, ai_broll?: false }` | `Asset` (202, `queued`) | Poll `GET /api/assets/{id}` every 1.5 s |
+| `POST /api/concepts/{id}/video` | `{ format?: "9:16" \| "1:1", mode?: "motion" \| "ai_clip" }` | `Asset` (202, `queued`) | Poll `GET /api/assets/{id}` every 1.5 s. `ai_clip` = **Pro** mode: 409 unless a clip is attached. Default `motion` is the standard video. |
+| `GET /api/concepts/{id}/video-options` | — | `{ modes: { mode, label, tier: "standard" \| "pro", available, has_clip?, description, needs? }[] }` | Drives the "Standard / Pro - AI video" choice |
+| `POST /api/concepts/{id}/ai-clip` | multipart `file` (mp4/mov/webm, ≤80 MB, ≤30 s) | `Asset` (`kind: "ai_clip"`) | Attach an AI-generated clip for Pro mode |
+| `DELETE /api/concepts/{id}/ai-clip` | — | 204 | Remove clips; Standard keeps working |
+| `GET /api/concepts/{id}/ai-prompt` | — | `{ prompt, duration_s, ... }` | Optional: text to paste into an AI video tool |
+| `POST /api/concepts/{id}/posts/generate` | `{ platforms?: ("linkedin" \| "instagram" \| "x")[], language?: "en" \| "hi" \| "hinglish" }` | `SocialPost[]` | Replaces un-approved drafts for the same concept + platform |
+| `GET /api/campaigns/{id}/posts` | — | `SocialPost[]` | |
+| `PATCH /api/posts/{id}` | `{ text?, status?: "generated" \| "approved" \| "rejected" }` | `SocialPost` | Editing re-runs the claim guard; approving with a `block` flag (or an X post over 280) returns 409 |
+| `POST /api/posts/{id}/regenerate` | — | `SocialPost` | A different take for the same platform |
+| `DELETE /api/posts/{id}` | — | 204 | |
+| `POST /api/posts/{id}/schedule` | `{ scheduled_at: ISO datetime }` | `SocialPost` | Needs status `approved` or `scheduled`; 409 otherwise. `DELETE` on the same path unschedules |
+| `POST /api/posts/{id}/publish` | `{ mode?: "manual_share" \| "simulated", external_url?: string }` | `SocialPost` | Records that the post went out. Nothing is posted by AdPilot: `manual_share` means the user pressed Post on the platform |
+| `POST /api/posts/{id}/metrics` | `{ impressions, likes, comments, shares, clicks }` | `SocialPost` | 409 unless published; stored as `metrics_source: "manual"` |
+| `POST /api/campaigns/{id}/posts/simulate-engagement` | — | `SocialPost[]` | Labelled `simulated`; for demos |
+| `GET /api/brands/{id}/posts` | — | `SocialPost[]` | All posts across the brand's campaigns |
+| `GET /api/brands/{id}/posting-insights` | — | `PostingInsights` | Best slots per platform (IST), heatmap, content patterns, plain-language `preferences`, `next_slots` |
+| `GET /api/brands/{id}/memory?recall=false` | — | `BrandMemoryView` | What is stored in Meko (counts, status, datapack id). `recall=true` runs a live Meko search (a few seconds) |
+| `GET /api/brands/{id}/socials` | — | `SocialAccount[]` | One row per platform |
+| `PUT /api/brands/{id}/socials/{platform}` | `{ handle_or_url }` | `SocialAccount[]` | Validates the handle or profile link, 422 with a message otherwise. A link, not a login |
+| `DELETE /api/brands/{id}/socials/{platform}` | — | `SocialAccount[]` | |
+| `GET /api/concepts/{id}/video-options` | — | `{ modes: VideoOption[] }` | Standard vs Pro (AI clip) |
 | `GET /api/assets/{id}` | — | `Asset` | |
 | `GET /api/assets?brand_id=&kind=` | — | `Asset[]` | Asset library |
 | `GET /api/campaigns/{id}/export` | — | `application/zip` | Approved concepts only. 409 if none. |
@@ -161,6 +183,44 @@ export interface IntegrationStatus { provider: string; label: string; status: "w
 | `POST /api/campaigns/{id}/iterate` | `{ batch_size?: 4 }` | `Iteration` | 409 if no metrics |
 | `GET /api/integrations` | — | `IntegrationStatus[]` | |
 
+### SocialPost
+
+```ts
+type SocialPost = {
+  id: number; campaign_id: number; concept_id: number;
+  platform: "linkedin" | "instagram" | "x";
+  hook: string;                 // first line
+  text: string;                 // ready to paste: body + hashtags
+  hashtags: string[]; thread: string[];   // thread: X only, 3 follow-ups
+  visual_idea: string; cta: string;
+  risk_flags: RiskFlag[];       // same shape as concept flags
+  status: "generated" | "approved" | "rejected" | "scheduled" | "published"; edited: boolean;
+  generation_mode: string;      // "offline" or the AI provider name
+  scheduled_at: string | null; published_at: string | null;
+  publish_mode: "" | "manual_share" | "simulated" | "synthetic_history";
+  external_url: string;
+  metrics: { impressions: number; likes: number; comments: number; shares: number; clicks: number };
+  metrics_source: "" | "manual" | "simulated" | "synthetic_history";
+  engagement_rate: number | null;   // (likes + 2*comments + 3*shares + clicks) / impressions
+  suggested?: { at: string; label: string; reason: string } | null;   // best next slot for this platform
+  char_count: number; char_limit: number;   // X: links count as 23; show "412 / 3000"
+};
+```
+
+Nothing is published by AdPilot: publishing is `manual_share` (the user presses Post on the platform) or `simulated` (labelled). Approved posts are included in the campaign export (`social_posts.json` and `social_posts/*.txt`).
+
+### SocialAccount
+
+```ts
+type SocialAccount = {
+  platform: "linkedin" | "instagram" | "x"; label: string;
+  connected: boolean; handle: string; url: string; connected_at: string | null;
+  publishing: "manual_share";   // always: we link accounts, we do not log in or post
+  note: string;
+};
+```
+
 ## Mocks
 `sample_data/fixtures/` holds **real** responses captured from the backend (`brand.json`, `campaign_detail.json`, `analytics.json`, `iteration.json`, `integrations.json`, `asset_ready.json`, plus `video.mp4`).
-Until Sync 1, the frontend uses hand-written mocks that follow the types above.
+Also available: `analytics.json`, `iteration.json`, `asset_ready.json`, plus `../backup_video.mp4` for the mock video player and `../sample_metrics.csv` for the CSV upload screen (concept ids 1–5).
+Iteration `generation_mode` can be `rules+gemini` or `rules+offline` (the ranking and plan are rules; only rewritten copy uses the LLM).

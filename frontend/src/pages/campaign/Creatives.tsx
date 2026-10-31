@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, ChevronDown, Download, Film, GitBranch, Play, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Crown, Download, Film, GitBranch, Play, RefreshCw, Upload, X } from "lucide-react";
 import { api, errorMessage, fileUrl } from "@/lib/api";
 import { cn } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { Card, EmptyState, ModeBadge, RiskFlags, Spinner, StatusPill } from "@/components/ui";
 import GenerateConcepts from "@/components/GenerateConcepts";
-import type { Asset, CampaignDetail, Concept, CopyField } from "@/lib/types";
+import SocialPosts from "@/components/SocialPosts";
+import ConnectedAccounts from "@/components/ConnectedAccounts";
+import { PostingInsightsCard } from "@/components/PostingInsights";
+import type { Asset, CampaignDetail, Concept, CopyField, VideoMode } from "@/lib/types";
 import { useCampaign } from "../Campaign";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -80,7 +83,7 @@ export default function Creatives() {
         <GenerateConcepts campaignId={detail.campaign.id} label="Generate 5 more" ghost />
       </aside>
 
-      <ConceptDetail key={selected.id} concept={selected} campaignId={detail.campaign.id} />
+      <ConceptDetail key={selected.id} concept={selected} campaignId={detail.campaign.id} brandId={detail.campaign.brand_id} />
     </div>
   );
 }
@@ -129,7 +132,8 @@ function ConceptRow({ concept, active, onClick }: { concept: Concept; active: bo
   );
 }
 
-function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: number }) {
+function ConceptDetail({ concept, campaignId, brandId }: { concept: Concept; campaignId: number; brandId: number }) {
+  const [view, setView] = useState<"ads" | "posts">("ads");
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -167,6 +171,28 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
 
   return (
     <div className="min-w-0 space-y-6">
+      <div className="flex gap-1 border-b border-line" role="tablist">
+        {([["ads", "Ads", "Video and platform copy"], ["posts", "Social posts", "LinkedIn, Instagram, X"]] as const).map(([k, label, sub]) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={view === k}
+            onClick={() => setView(k)}
+            className={"-mb-px border-b-2 px-4 py-2 text-sm transition " + (view === k ? "border-white text-ink" : "border-transparent text-muted hover:text-ink")}
+          >
+            {label} <span className="ml-1 hidden text-xs text-muted sm:inline">{sub}</span>
+          </button>
+        ))}
+      </div>
+
+      {view === "posts" ? (
+        <>
+          <SocialPosts conceptId={concept.id} campaignId={campaignId} brandId={brandId} />
+          <ConnectedAccounts brandId={brandId} compact />
+          <PostingInsightsCard brandId={brandId} withHeatmap={false} />
+        </>
+      ) : (
+      <>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
@@ -237,6 +263,8 @@ function ConceptDetail({ concept, campaignId }: { concept: Concept; campaignId: 
       </div>
 
       <VisualBrief concept={concept} />
+      </>
+      )}
     </div>
   );
 }
@@ -324,7 +352,9 @@ function PlatformCopy({ concept }: { concept: Concept }) {
           {active === "instagram" && pc.instagram && (
             <div className="space-y-3">
               <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">{pc.instagram.caption}</p>
-              <p className="text-sm text-muted">{pc.instagram.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}</p>
+              {!pc.instagram.hashtags.every((h) => pc.instagram!.caption.includes(h.startsWith("#") ? h : `#${h}`)) && (
+                <p className="text-sm text-muted">{pc.instagram.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}</p>
+              )}
             </div>
           )}
 
@@ -384,9 +414,15 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
   useEffect(() => setAssetId(latest?.id ?? null), [latest?.id]);
 
   const { data: health } = useQuery({ queryKey: ["health"], queryFn: api.health });
+  const [mode, setMode] = useState<VideoMode>("motion");
+  const { data: opts } = useQuery({ queryKey: ["video-options", concept.id], queryFn: () => api.videoOptions(concept.id), retry: false });
+  const proReady = opts?.modes.find((m) => m.mode === "ai_clip")?.available ?? false;
+  useEffect(() => {
+    if (!proReady && mode === "ai_clip") setMode("motion");
+  }, [proReady, mode]);
 
   const render = useMutation({
-    mutationFn: () => api.renderVideo(concept.id, { format: "9:16" }),
+    mutationFn: () => api.renderVideo(concept.id, { format: "9:16", mode }),
     onSuccess: (a) => {
       qc.setQueryData(["asset", a.id], a);
       setAssetId(a.id);
@@ -416,6 +452,7 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
 
   return (
     <Card title="Video ad" action={asset?.status === "ready" ? <ModeBadge mode={asset.generation_mode} /> : undefined}>
+      {opts && <VideoModes conceptId={concept.id} mode={mode} setMode={setMode} proReady={proReady} />}
       {asset?.status === "ready" && asset.url ? (
         <div className="space-y-3">
           <video src={fileUrl(asset.url)} controls playsInline className="aspect-[9/16] w-full rounded-xl bg-black" />
@@ -450,7 +487,7 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
           {health && !health.ffmpeg && <p className="mt-2 text-xs text-warn">FFmpeg is missing on the server.</p>}
           <button className="btn-primary mt-5" onClick={() => render.mutate()} disabled={render.isPending}>
             {render.isPending ? <Spinner /> : <Play className="h-4 w-4" />}
-            {asset?.status === "failed" ? "Retry" : "Render video"}
+            {asset?.status === "failed" ? "Retry" : mode === "ai_clip" ? "Render Pro video" : "Render video"}
           </button>
         </div>
       )}
@@ -468,6 +505,77 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
         </ol>
       )}
     </Card>
+  );
+}
+
+/** Standard (template motion video) vs Pro (the same verified copy over an AI-generated clip). */
+function VideoModes({ conceptId, mode, setMode, proReady }: { conceptId: number; mode: VideoMode; setMode: (m: VideoMode) => void; proReady: boolean }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const refresh = () => qc.invalidateQueries({ queryKey: ["video-options", conceptId] });
+  const upload = useMutation({
+    mutationFn: (f: File) => api.uploadAiClip(conceptId, f),
+    onSuccess: async () => {
+      await refresh();   // wait until the options say Pro is available, otherwise the guard resets the mode
+      setMode("ai_clip");
+      toast.success("AI clip attached. Pro video is ready to render.");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const remove = useMutation({
+    mutationFn: () => api.removeAiClip(conceptId),
+    onSuccess: async () => {
+      setMode("motion");
+      await refresh();
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+
+  return (
+    <div className="mb-4 space-y-2">
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1 text-sm">
+        <button onClick={() => setMode("motion")} className={cn("rounded-md px-3 py-1.5 transition", mode === "motion" ? "bg-white/10 text-ink" : "text-muted hover:text-ink")}>
+          Standard
+        </button>
+        <button
+          onClick={() => proReady && setMode("ai_clip")}
+          disabled={!proReady}
+          title={proReady ? undefined : "Attach an AI clip to use Pro"}
+          className={cn(
+            "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 transition disabled:cursor-not-allowed",
+            mode === "ai_clip" ? "bg-white/10 text-ink" : "text-muted hover:text-ink disabled:opacity-60",
+          )}
+        >
+          <Crown className="h-3.5 w-3.5 text-amber-300" /> Pro · AI
+        </button>
+      </div>
+      <p className="text-xs text-muted">
+        {mode === "ai_clip"
+          ? "Your verified copy, price and call to action over an AI-generated clip of the product. Labelled “AI-generated video”."
+          : "Animated product ad built from your Brand Memory, product photos and verified claims."}
+      </p>
+      <div className="flex items-center gap-3 text-xs">
+        <label className={cn("inline-flex cursor-pointer items-center gap-1 text-muted hover:text-ink", upload.isPending && "pointer-events-none opacity-60")}>
+          {upload.isPending ? <Spinner /> : <Upload className="h-3.5 w-3.5" />}
+          {proReady ? "Replace AI clip" : "Add AI clip (mp4, up to 30 s)"}
+          <input
+            type="file"
+            accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,.m4v"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) upload.mutate(f);
+            }}
+          />
+        </label>
+        {proReady && (
+          <button className="text-muted hover:text-ink" onClick={() => remove.mutate()} disabled={remove.isPending}>
+            Remove clip
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
