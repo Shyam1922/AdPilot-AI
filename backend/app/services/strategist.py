@@ -106,12 +106,26 @@ def offline_strategy(profile: BrandProfile, objective: str, channels: list[str],
     )
 
 
+def compact_profile(profile: BrandProfile) -> str:
+    """Only what the strategist/copywriter needs. Smaller prompts = faster, cheaper, more focused answers."""
+    return json.dumps({
+        "brand": profile.brand_name, "category": profile.product_category, "description": profile.description,
+        "products": [{"name": p.name, "price": p.price} for p in profile.products],
+        "value_propositions": profile.value_propositions[:5],
+        "approved_claims": [c.claim for c in profile.approved_claims],
+        "audience_hypotheses": [{"segment": h.segment, "need": h.need, "confidence": h.confidence}
+                                for h in profile.audience_hypotheses],
+        "tone": profile.brand_tone, "differentiators": profile.differentiators,
+        "do_not_claim_unconfirmed": profile.unknowns_to_confirm,
+    }, ensure_ascii=False)
+
+
 def build_prompt(profile: BrandProfile, objective: str, channels: list[str], product_focus: str,
                  audience_note: str, budget_note: str) -> str:
     return f"""Create a campaign strategy for this brand.
 
 Brand Memory (trusted, already verified):
-{profile.model_dump_json()}
+{compact_profile(profile)}
 
 Campaign objective: {objective}
 Channels: {json.dumps(channels)}

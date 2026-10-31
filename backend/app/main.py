@@ -11,10 +11,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .api import assets, brands, campaigns, concepts, integrations
+from .api import analytics, assets, brands, campaigns, concepts, integrations
 from .config import settings
 from .db import init_db
-from .services.llm import active_provider
+from .services.llm import active_provider, gemini_status
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -35,7 +35,7 @@ app.mount("/files", StaticFiles(directory=str(settings.storage_dir)), name="file
 app.mount("/demo-store", StaticFiles(directory=str(settings.sample_data_dir / "demo_store"), html=True),
           name="demo-store")
 
-for module in (brands, campaigns, concepts, assets, integrations):
+for module in (brands, campaigns, concepts, assets, analytics, integrations):
     app.include_router(module.router, prefix="/api")
 
 
@@ -44,6 +44,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "llm_provider": active_provider(),
+        "gemini": gemini_status(),
         "ffmpeg": shutil.which("ffmpeg") is not None,
         "demo_store_url": f"https://{settings.demo_store_host}/",
     }

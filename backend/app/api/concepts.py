@@ -120,3 +120,32 @@ def regenerate_field(concept_id: int, req: RegenerateRequest, session: Session =
 def get_concept(concept_id: int, session: Session = Depends(get_session)) -> dict:
     c = get_or_404(session, Concept, concept_id)
     return concept_out(c, latest_videos(session, c.campaign_id).get(c.id))
+
+
+class VideoRequest(BaseModel):
+    format: Literal["9:16", "1:1", "4:5"] = "9:16"
+
+
+@router.post("/concepts/{concept_id}/video", status_code=202)
+def create_video(concept_id: int, background: BackgroundTasks, req: VideoRequest = VideoRequest(),
+                 session: Session = Depends(get_session)) -> dict:
+    """Start rendering an MP4 for this concept. Poll GET /api/assets/{id} until status is ready or failed."""
+    import shutil
+
+    from ..models import Asset
+    from ..serializers import asset_out
+    from ..services.video_jobs import render_job
+
+    c = get_or_404(session, Concept, concept_id)
+    camp = get_or_404(session, Campaign, c.campaign_id)
+    if not shutil.which("ffmpeg"):
+        raise HTTPException(503, "FFmpeg is not installed on the server, so videos can't be rendered.")
+    asset = Asset(campaign_id=camp.id, concept_id=c.id, brand_id=camp.brand_id, kind="video", fmt=req.format,
+                  status="queued", generation_mode="template", meta={"progress": 0.0})
+    session.add(asset)
+    session.commit()
+    session.refresh(asset)
+    audit(session, "concept", c.id, "video_requested", asset_id=asset.id, format=req.format)
+    session.commit()
+    background.add_task(render_job, asset.id)
+    return asset_out(asset)

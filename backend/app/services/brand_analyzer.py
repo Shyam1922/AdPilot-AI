@@ -336,6 +336,21 @@ def analyze(ext: ExtractionResult | None, manual: ManualBrandInput, brand_dir: P
     profile.source_urls = [ext.final_url or ext.url] if ext else []
     profile = ground_claims(profile, sources, manual.claims_to_avoid)
 
+    if result.mode == "gemini":
+        # The product name must be a product we actually found (or the one the user typed).
+        names = [p.name for p in profile.products]
+        if manual.product_name:
+            profile.product_name = manual.product_name
+        elif names and profile.product_name not in names:
+            match = next((n for n in names if profile.product_name and profile.product_name.lower() in n.lower()), None)
+            profile.product_name = match or names[0]
+        # Never end up with fewer claims than the deterministic path: add verbatim, sourced bullets Gemini skipped.
+        base = offline_profile(ext, manual, sources)
+        have = " ".join(c.claim.lower() for c in profile.approved_claims)
+        for c in base.approved_claims:
+            if c.claim.lower() not in have and coverage(c.claim, have) < 0.8:
+                profile.approved_claims.append(c)
+
     # Assets: logo + product images (safe download).
     brand_dir.mkdir(parents=True, exist_ok=True)
     logo_path = ""

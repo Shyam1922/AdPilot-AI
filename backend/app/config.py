@@ -21,8 +21,12 @@ class Settings:
     # LLM: "auto" uses Gemini when a key is present, otherwise the offline generator.
     llm_provider: str = os.getenv("LLM_PROVIDER", "auto")
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
-    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-    llm_timeout_s: float = float(os.getenv("LLM_TIMEOUT_S", "45"))
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
+    llm_timeout_s: float = float(os.getenv("LLM_TIMEOUT_S", "20"))
+    gemini_thinking: str = os.getenv("GEMINI_THINKING", "low")   # low | medium | high | default
+    # Tried in order when the main model is busy (503), rate-limited (429) or retired (404).
+    gemini_fallback_models: str = os.getenv(
+        "GEMINI_FALLBACK_MODELS", "gemini-3.5-flash-lite,gemini-flash-latest")
 
     database_url: str = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'adpilot.db'}")
     storage_dir: Path = Path(os.getenv("STORAGE_DIR", str(BACKEND_DIR / "storage")))

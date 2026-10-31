@@ -14,6 +14,7 @@ from ..schemas.brand import BrandProfile
 from ..schemas.concept import CONCEPT_TYPES, AdConcept, CampaignStrategy, ConceptBatch, VideoBeat, VisualBrief
 from . import llm
 from .output_validation import claim_guard, hashtags, length_flags, near_duplicates, platform_copy
+from .strategist import compact_profile
 from .text_utils import coverage, short_claim, strip_brand, trim_words
 
 PROMPT_VERSION = "concepts-v1"
@@ -193,12 +194,33 @@ def offline_batch(x: Ctx) -> ConceptBatch:
 
 
 # --------------------------------------------------------------------------- LLM
+from pydantic import BaseModel as _BM, Field as _F  # noqa: E402
+
+
+class ConceptCopy(_BM):
+    """What the LLM writes. Visual brief and video script are built in code from it (faster, consistent)."""
+    concept_type: str
+    target_segment: str
+    angle: str
+    hook: str = _F(max_length=120)
+    primary_text: str
+    headline: str = _F(max_length=60)
+    cta: str = _F(max_length=30)
+    rationale: str = ""
+
+
+class ConceptCopyBatch(_BM):
+    concepts: list[ConceptCopy]
+
+
 def build_prompt(profile: BrandProfile, strategy: CampaignStrategy, x: Ctx, memory_context: str = "") -> str:
     lang = {"en": "English", "hi": "Hindi (Devanagari)", "hinglish": "Hinglish (Hindi in Latin script mixed with English)"}
     return f"""Write 5 distinct ad concepts for this campaign.
 
-Brand Memory (verified): {profile.model_dump_json()}
-Strategy: {strategy.model_dump_json()}
+Brand Memory (verified): {compact_profile(profile)}
+Strategy: {json.dumps({"positioning": strategy.positioning_statement, "kpi": strategy.primary_kpi,
+                       "segments": [s.name for s in strategy.segments], "angles": strategy.creative_angles,
+                       "ctas": strategy.ctas}, ensure_ascii=False)}
 Focus product: {x.product_full} (price on site: {x.price or "unknown"})
 Approved claims you may use (verbatim meaning only): {json.dumps(x.claims, ensure_ascii=False)}
 Avoid: {json.dumps(x.guardrails, ensure_ascii=False)}
@@ -214,9 +236,7 @@ Rules:
   certifications or medical words unless they appear in the approved claims or price.
 - testimonial-style must start primary_text with "(Dramatization)" and must not pretend to be a real review.
 - offer: if no real offer exists, frame value (what you get for the real price), never invent a discount.
-- video_script: exactly 4 beats: hook (3s), product (4s), benefit (4s), cta (4s); on_screen_text ≤ 60 chars.
-- visual_brief.product_placement must use the real product image (never redraw the product).
-- claim_sources: list the approved claims you used."""
+- target_segment: one of the strategy segments. rationale: one short sentence."""
 
 
 def _finalize(c: AdConcept, x: Ctx, tags: list[str]) -> dict:
@@ -249,9 +269,22 @@ def generate(profile: BrandProfile, strategy: CampaignStrategy, product_focus: s
                 c.primary_text = "(Dramatization) " + c.primary_text
         return ConceptBatch(concepts=fixed)
 
-    res = llm.generate_json("ad_concepts", build_prompt(profile, strategy, x, memory_context), ConceptBatch,
-                            lambda: offline_batch(x), temperature=0.9, postprocess=repair)
-    concepts = res.data.concepts
+    def to_batch(copy: ConceptCopyBatch) -> ConceptBatch:
+        out = []
+        for i, c in enumerate(copy.concepts):
+            t = c.concept_type if c.concept_type in CONCEPT_TYPES else CONCEPT_TYPES[min(i, 4)]
+            out.append(AdConcept(concept_type=t, target_segment=c.target_segment, angle=c.angle, hook=c.hook,
+                                 primary_text=c.primary_text, headline=c.headline, cta=c.cta,
+                                 visual_brief=visual_brief(t, x), video_script=video_script(c.hook, x, c.cta),
+                                 claim_sources=["approved_claims"], rationale=c.rationale))
+        return repair(ConceptBatch(concepts=out))
+
+    offline = offline_batch(x)
+    res = llm.generate_json("ad_concepts", build_prompt(profile, strategy, x, memory_context), ConceptCopyBatch,
+                            lambda: ConceptCopyBatch(concepts=[ConceptCopy(**c.model_dump(include=set(ConceptCopy.model_fields)))
+                                                               for c in offline.concepts]),
+                            temperature=0.9, timeout=45)
+    concepts = to_batch(res.data).concepts if res.mode == "gemini" else offline.concepts
     warnings = list(res.warnings)
 
     # Diversity: replace the later of any near-duplicate pair with an alternative hook.

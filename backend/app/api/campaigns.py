@@ -95,3 +95,23 @@ def update_campaign(campaign_id: int, body: CampaignUpdate, session: Session = D
     session.commit()
     session.refresh(camp)
     return campaign_out(session, camp)
+
+
+@router.get("/campaigns/{campaign_id}/export")
+def export_campaign(campaign_id: int, session: Session = Depends(get_session)):
+    """ZIP of approved concepts: copy CSV, strategy, concepts JSON and rendered videos. Nothing is published."""
+    from fastapi.responses import Response
+
+    from ..services.export_service import build_zip
+
+    camp = get_or_404(session, Campaign, campaign_id)
+    brand = get_or_404(session, Brand, camp.brand_id)
+    concepts = session.exec(select(Concept).where(Concept.campaign_id == camp.id).order_by(Concept.id)).all()
+    if not any(c.status == "approved" for c in concepts):
+        raise HTTPException(409, "Approve at least one concept before exporting.")
+    data, filename = build_zip(brand, camp, concepts, latest_videos(session, camp.id))
+    audit(session, "campaign", camp.id, "exported", approved=sum(c.status == "approved" for c in concepts),
+          bytes=len(data))
+    session.commit()
+    return Response(data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
