@@ -380,7 +380,7 @@ export interface SocialPost {
   generation_mode: GenerationMode;
   scheduled_at: string | null;
   published_at: string | null;
-  publish_mode: "" | "manual_share" | "simulated" | "synthetic_history";
+  publish_mode: "" | "manual_share" | "simulated" | "api" | "synthetic_history";
   external_url: string;
   metrics: PostMetrics;
   metrics_source: "" | "manual" | "simulated" | "synthetic_history";

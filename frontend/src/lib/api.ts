@@ -138,7 +138,7 @@ export const api = {
   schedulePost: (id: number, scheduledAt: string) =>
     request<SocialPost>(`/api/posts/${id}/schedule`, json("POST", { scheduled_at: scheduledAt })),
   unschedulePost: (id: number) => request<SocialPost>(`/api/posts/${id}/schedule`, { method: "DELETE" }),
-  publishPost: (id: number, mode: "manual_share" | "simulated", external_url = "") =>
+  publishPost: (id: number, mode: "manual_share" | "simulated" | "api", external_url = "") =>
     request<SocialPost>(`/api/posts/${id}/publish`, json("POST", { mode, external_url })),
   setPostMetrics: (id: number, m: PostMetrics) => request<SocialPost>(`/api/posts/${id}/metrics`, json("POST", m)),
   simulateEngagement: (campaignId: number) =>

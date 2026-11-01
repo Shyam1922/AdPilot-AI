@@ -46,6 +46,7 @@ export default function PublishPanel({ post, brandId, onChange }: { post: Social
   const [opened, setOpened] = useState(false);
   const [link, setLink] = useState("");
   const account = useQuery({ queryKey: ["socials", brandId], queryFn: () => api.listSocials(brandId) }).data?.find((a) => a.platform === post.platform);
+  const xLive = useQuery({ queryKey: ["integrations"], queryFn: api.listIntegrations }).data?.find((i) => i.provider === "x_publishing")?.status === "connected" && post.platform === "x";
   const [adding, setAdding] = useState(false);
   const [m, setM] = useState<Record<keyof PostMetrics, string>>({ impressions: "", likes: "", comments: "", shares: "", clicks: "" });
 
@@ -60,8 +61,8 @@ export default function PublishPanel({ post, brandId, onChange }: { post: Social
   const schedule = useMutation({ mutationFn: (iso: string) => api.schedulePost(post.id, iso), onSuccess: (p) => { done(p); toast.success("Scheduled"); }, onError });
   const unschedule = useMutation({ mutationFn: () => api.unschedulePost(post.id), onSuccess: done, onError });
   const publish = useMutation({
-    mutationFn: (mode: "manual_share" | "simulated") => api.publishPost(post.id, mode, mode === "manual_share" ? link.trim() : ""),
-    onSuccess: (p) => { done(p); setOpened(false); toast.success(p.publish_mode === "simulated" ? "Marked as published (simulated)" : "Marked as published"); },
+    mutationFn: (mode: "manual_share" | "simulated" | "api") => api.publishPost(post.id, mode, mode === "manual_share" ? link.trim() : ""),
+    onSuccess: (p) => { done(p); setOpened(false); toast.success(p.publish_mode === "simulated" ? "Marked as published (simulated)" : p.publish_mode === "api" ? "Published to X" : "Marked as published"); },
     onError,
   });
   const metrics = useMutation({
@@ -90,7 +91,7 @@ export default function PublishPanel({ post, brandId, onChange }: { post: Social
           </span>
           <span className="text-xs text-muted">
             {post.external_url && <a href={post.external_url} target="_blank" rel="noreferrer" className="mr-3 text-emerald-300 hover:text-white">View post</a>}
-            {post.publish_mode === "simulated" ? "Simulated publish (nothing was posted)" : post.publish_mode === "synthetic_history" ? "Synthetic demo history" : "Posted by you on the platform"}
+            {post.publish_mode === "simulated" ? "Simulated publish (nothing was posted)" : post.publish_mode === "api" ? "Published from AdPilot through the X API" : post.publish_mode === "synthetic_history" ? "Synthetic demo history" : "Posted by you on the platform"}
           </span>
         </div>
         {hasMetrics ? (
@@ -170,7 +171,12 @@ export default function PublishPanel({ post, brandId, onChange }: { post: Social
 
       <div className="space-y-2 border-t border-line pt-4">
         <div className="flex flex-wrap items-center gap-2">
-          <button className="btn-primary h-9 px-3 text-xs" onClick={openShare}>
+          {xLive && (
+            <button className="btn-primary h-9 bg-emerald-400 px-3 text-xs hover:bg-emerald-300" onClick={() => publish.mutate("api")} disabled={publish.isPending} title="Posts this to your connected X account right now.">
+              {publish.isPending ? <Spinner /> : <Send className="h-3.5 w-3.5" />} Publish to X now
+            </button>
+          )}
+          <button className={cn(xLive ? "btn-ghost" : "btn-primary", "h-9 px-3 text-xs")} onClick={openShare}>
             <ExternalLink className="h-3.5 w-3.5" /> {share.label}
           </button>
           <button className="btn-ghost h-9 px-3 text-xs" onClick={async () => (await copyText(post.text)) && toast.success("Copied")}>
@@ -195,7 +201,7 @@ export default function PublishPanel({ post, brandId, onChange }: { post: Social
         {opened && (
           <input className="input h-9 text-xs" placeholder="Paste the link to your post (optional)" value={link} onChange={(e) => setLink(e.target.value)} />
         )}
-        <p className="text-xs text-muted">{share.note} AdPilot never posts for you; you press Post on the platform.</p>
+        <p className="text-xs text-muted">{share.note} {xLive ? "Publish to X now posts to your connected account only when you press it." : "AdPilot never posts for you; you press Post on the platform."}</p>
       </div>
     </div>
   );
