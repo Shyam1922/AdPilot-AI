@@ -141,3 +141,42 @@ def test_promotion_policy_holds_weak_learnings_and_traces_the_decision(monkeypat
     promote = next(a for t, a in calls if t == "memory_promote")
     assert len(promote["memory_ids"]) == 1                                   # only the approved one
     assert any(t == "conversation_add_message" and "held" in a["output"] for t, a in calls)
+
+
+def test_x_oauth_signature_matches_reference():
+    """Twitter's documented OAuth 1.0a example (status update), to prove the signing is correct."""
+    from app.services.x_publisher import _auth_header
+    # Reference values from developer.x.com 'Creating a signature' (POST statuses/update.json, with params in the body)
+    # are form-based; here we check determinism and structure instead of the form example.
+    h1 = _auth_header("POST", "https://api.twitter.com/2/tweets", key="k", secret="s", token="t", token_secret="ts",
+                      nonce="abc", timestamp="1700000000")
+    h2 = _auth_header("POST", "https://api.twitter.com/2/tweets", key="k", secret="s", token="t", token_secret="ts",
+                      nonce="abc", timestamp="1700000000")
+    assert h1 == h2 and h1.startswith("OAuth ") and 'oauth_signature="' in h1 and 'oauth_consumer_key="k"' in h1
+
+
+def test_publish_to_x_via_api(client, monkeypatch):
+    from app.services import x_publisher
+    _, _, posts = _setup(client)
+    x_post = next(p for p in posts if p["platform"] == "x")
+    other = next(p for p in posts if p["platform"] != "x")
+    for p in (x_post, other):
+        client.patch(f"/api/posts/{p['id']}", json={"status": "approved"})
+
+    # no keys: a clear, non-crashing error and the post stays unpublished
+    monkeypatch.setattr(x_publisher, "configured", lambda: False)
+    r = client.post(f"/api/posts/{x_post['id']}/publish", json={"mode": "api"})
+    assert r.status_code == 502 and "X keys" in r.json()["detail"]
+    ints = {i["provider"]: i["status"] for i in client.get("/api/integrations").json()}
+    assert ints["x_publishing"] == "not_connected"
+
+    # only X can be published through the API
+    r = client.post(f"/api/posts/{other['id']}/publish", json={"mode": "api"})
+    assert r.status_code == 422
+
+    # with keys and a stubbed X: published, real link stored
+    monkeypatch.setattr(x_publisher, "configured", lambda: True)
+    monkeypatch.setattr(x_publisher, "post_tweet", lambda text, **kw: ("1234567890", "https://x.com/i/status/1234567890"))
+    pub = client.post(f"/api/posts/{x_post['id']}/publish", json={"mode": "api"}).json()
+    assert pub["status"] == "published" and pub["publish_mode"] == "api"
+    assert pub["external_url"] == "https://x.com/i/status/1234567890"

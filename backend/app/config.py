@@ -77,6 +77,12 @@ class Settings:
     meko_datapack_id: str = os.getenv("MEKO_DATAPACK_ID", "")        # optional: force an existing datapack
     meko_timeout_s: float = float(os.getenv("MEKO_TIMEOUT_S", "20"))
 
+    # X (Twitter) publishing, optional. Create an app with Read and write permission at developer.x.com.
+    x_api_key: str = os.getenv("X_API_KEY", "")
+    x_api_secret: str = os.getenv("X_API_SECRET", "")
+    x_access_token: str = os.getenv("X_ACCESS_TOKEN", "")
+    x_access_secret: str = os.getenv("X_ACCESS_SECRET", "")
+
     seed_demo: bool = _bool("SEED_DEMO", True)
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from ..services import meko_memory
+from ..services import meko_memory, x_publisher
 
 router = APIRouter(tags=["integrations"])
 
@@ -43,9 +43,18 @@ def _meko_row() -> dict:
             "docs_url": "https://mekodata.netlify.app/"}
 
 
+def _x_row() -> dict:
+    ok = x_publisher.configured()
+    return {"provider": "x_publishing", "label": "X publishing",
+            "status": "connected" if ok else "not_connected",
+            "notes": ("Approved posts can be published to your X account from AdPilot, only when you press Publish."
+                      if ok else "Add X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN and X_ACCESS_SECRET to backend/.env."),
+            "docs_url": "https://developer.x.com/en/portal/dashboard"}
+
+
 @router.get("/integrations")
 def list_integrations() -> list[dict]:
-    return [_meko_row(), *PROVIDERS]
+    return [_meko_row(), _x_row(), *PROVIDERS]
 
 
 @router.post("/integrations/meko/test")

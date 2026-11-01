@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 from ..db import get_session
 from ..models import Brand, Campaign, Concept, SocialPost, now
 from ..serializers import post_out
-from ..services import meko_memory, posting_insights as pi, social_posts
+from ..services import meko_memory, posting_insights as pi, social_posts, x_publisher
 from ..services.meko_sync import analyze_brand_posts, datapack_for, save_posting_insights_job
 from ..services.output_validation import claim_guard
 from .common import audit, brand_context, get_or_404, guardrail_list, touch
@@ -39,7 +39,8 @@ class ScheduleBody(BaseModel):
 class PublishBody(BaseModel):
     # manual_share: the user pressed Post on the platform (we opened it with the text filled in).
     # simulated: a labelled demo publish; nothing leaves the app.
-    mode: Literal["manual_share", "simulated"] = "manual_share"
+    # api: published through the platform's official API (X only, needs X_* keys in .env).
+    mode: Literal["manual_share", "simulated", "api"] = "manual_share"
     external_url: str = ""
 
 
@@ -248,8 +249,16 @@ def publish_post(post_id: int, body: PublishBody, background: BackgroundTasks,
     platform; in simulated mode nothing leaves the app and the post is labelled as simulated everywhere."""
     p = get_or_404(session, SocialPost, post_id)
     _can_publish(p)
+    external_url = body.external_url.strip()
+    if body.mode == "api":
+        if p.platform != "x":
+            raise HTTPException(422, "Publishing from AdPilot is only connected for X. Use the share button for this platform.")
+        try:
+            _, external_url = x_publisher.post_tweet(p.text)
+        except x_publisher.XPublishError as exc:
+            raise HTTPException(502, str(exc))
     p.status, p.published_at, p.publish_mode = "published", now(), body.mode
-    p.external_url = body.external_url.strip()
+    p.external_url = external_url
     touch(p)
     camp = get_or_404(session, Campaign, p.campaign_id)
     audit(session, "post", p.id, "published", platform=p.platform, mode=body.mode)
