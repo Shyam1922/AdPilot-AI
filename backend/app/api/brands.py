@@ -1,14 +1,15 @@
 """Brand Intelligence endpoints: analyze a URL / manual facts into Brand Memory, edit it, upload assets."""
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
-from sqlmodel import Session, select
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile
+from sqlmodel import Session, delete, select
 
 from ..config import settings
 from ..db import get_session
-from ..models import Brand
+from ..models import Asset, Brand, Campaign, Concept, Iteration, MetricSnapshot, SocialPost
 from ..schemas.brand import AnalyzeBrandRequest, BrandProfile, BrandUpdate
 from ..serializers import brand_out
 from ..services import brand_analyzer
@@ -98,6 +99,27 @@ def update_brand(brand_id: int, body: BrandUpdate, background: BackgroundTasks,
     if body.profile is not None:
         background.add_task(sync_brand_job, brand.id)
     return brand_out(brand)
+
+
+@router.delete("/brands/{brand_id}", status_code=204)
+def delete_brand(brand_id: int, session: Session = Depends(get_session)) -> Response:
+    """Remove a brand and everything under it: campaigns, concepts, posts, assets, metrics, files.
+
+    The Meko datapack is left alone (Meko has no delete over MCP); it is simply no longer referenced.
+    """
+    brand = get_or_404(session, Brand, brand_id)
+    camp_ids = [c for c in session.exec(select(Campaign.id).where(Campaign.brand_id == brand.id)).all()]
+    if camp_ids:
+        for model in (MetricSnapshot, SocialPost, Iteration, Concept, Asset):
+            session.exec(delete(model).where(model.campaign_id.in_(camp_ids)))
+        session.exec(delete(Campaign).where(Campaign.id.in_(camp_ids)))
+    session.exec(delete(Asset).where(Asset.brand_id == brand.id))
+    name = brand.name
+    session.delete(brand)
+    audit(session, "brand", brand_id, "deleted", name=name, campaigns=len(camp_ids))
+    session.commit()
+    shutil.rmtree(brand_dir(brand_id), ignore_errors=True)
+    return Response(status_code=204)
 
 
 ALLOWED = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}

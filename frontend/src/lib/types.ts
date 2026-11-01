@@ -244,7 +244,16 @@ export interface ConceptPerformance {
   p_best: number | null;
 }
 
+export interface TrendModel {
+  metric_label: string;
+  effects: { trait: string; value: string; ads: number; trials: number; rate: number; ci_low: number; ci_high: number; lift: number; p_better: number }[];
+  trends: { concept_id: number; label: string; days: number; slope_per_day: number; z: number; verdict: "rising" | "flat" | "fading"; first: number; last: number }[];
+  notes: string[];
+  method: string;
+}
+
 export interface Analytics {
+  model?: TrendModel | null;
   campaign_id: number;
   objective_metric: "ctr" | "cvr" | "roas";
   objective_metric_note: string;

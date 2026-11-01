@@ -3,7 +3,7 @@
 **The AI marketing team for Indian D2C brands and SMEs.**
 AdPilot AI learns a brand once, then plans, creates, launches and improves its campaigns, and every claim it makes is grounded in the brand's own product facts.
 
-> **Status:** end-to-end and running on the live API. Website → Brand Memory → strategy → 5 claim-checked ad concepts (English / Hindi / Hinglish) → real 15-second MP4 → approval and export → labelled metrics → ranking with confidence intervals → 4 next variants → **social posts for LinkedIn, Instagram and X** → **scheduling and manual publishing with posting-time intelligence** → everything learned is written to **Meko** shared memory, one datapack per brand. Gemini live with fallbacks and an offline generator. 43 automated tests pass.
+> **Status:** end-to-end and running on the live API. Website → Brand Memory → strategy → 5 claim-checked ad concepts (English / Hindi / Hinglish) → real 15-second MP4 → approval and export → labelled metrics → ranking with confidence intervals → 4 next variants → **social posts for LinkedIn, Instagram and X** → **scheduling and manual publishing with posting-time intelligence** → everything learned is written to **Meko** shared memory, one datapack per brand. Gemini live with fallbacks and an offline generator. 49 automated tests pass.
 
 ### What it does, in one minute
 1. **Learns a brand** from its website (or manual facts): products, tone, approved claims with their source, and the claims it must *not* make.
@@ -17,7 +17,7 @@ AdPilot AI learns a brand once, then plans, creates, launches and improves its c
 | Website extraction (JSON-LD, Open Graph, Shopify feed, SSRF guard, hidden-text stripping) | ✅ Done |
 | Brand Memory (claim grounding, audience hypotheses, unknowns, brand colours) | ✅ Done |
 | Strategist (6 objectives) · Ad generator (5 concepts) · Claim guard · Platform copy | ✅ Done |
-| **Social posts** (LinkedIn, Instagram, X + thread; English / Hinglish / Hindi; claim-checked; edit, approve) | ✅ Done |
+| **Social posts** (LinkedIn, Instagram, X + thread; English / Hinglish / Hindi; claim-checked; **top 5 tags per platform**; edit, approve) | ✅ Done |
 | **Scheduling and manual publishing** (best-time suggestion, share-intent links, record results) | ✅ Done |
 | **Posting intelligence** (best day/time per platform, what content works, learned from past posts) | ✅ Done |
 | **Connected social accounts** (link X / LinkedIn / Instagram handles per brand) | ✅ Done (link only, no OAuth) |
@@ -290,7 +290,8 @@ There is no foundation-model training. It's an **LLM-powered workflow with a tra
    - Each variant stores `parent_concept_id`, `changed_variables`, `rationale` and the metric snapshot it used.
 6. **Learnings → Brand Memory.** For example: "Problem-led hooks out-performed demo hooks on CTR (early signal, simulated data)."
 7. **Limitations are always returned.** Simulated data, correlation is not causation, small samples.
-8. **Optional ML:** only once real labelled campaign data exists (split by campaign or time, compared against a baseline). Not before.
+8. **Trait and trend model.** A small empirical-Bayes beta-binomial model learns which creative traits (angle, audience, layout, hook style, CTA) beat the campaign average, with the evidence discounted for ad-to-ad noise, plus a weighted daily trend per ad that flags rising or fading creatives. The next batch uses it to pick a layout and an audience; the Performance page shows it as "What the model learned". It reports association, not cause.
+9. **Optional ML on real data:** a heavier model only once real labelled campaign data exists (split by campaign or time, compared against a baseline). Not before.
 
 ---
 
@@ -332,7 +333,7 @@ The Integrations page shows exactly these statuses.
 |---|---|---|
 | `adpilot-brand-agent` | After a brand is analyzed or edited | `conversation_create` → `datapack_create` (one datapack per brand) → `conversation_add_message` (sync trace) → `memory_add` (products, approved claims, tone, unknowns) |
 | `adpilot-creative-agent` | Before and after generating concepts | `conversation_create` → `context_search` (past learnings fed into the Gemini prompt) → `conversation_add_message` (what was generated and the plan it followed) |
-| `adpilot-analyst-agent` | After optimization (G3) | `memory_add` (what worked, labelled with its data source) → `memory_promote` (shared with all agents) |
+| `adpilot-analyst-agent` | After optimization (G3) | `memory_add` (what worked, labelled with its data source) → a **promotion policy in code** holds back learnings that rest on insufficient data → `memory_promote` (only the approved ones are shared) → `conversation_add_message` (the promoted / held decision and why, as a trace) |
 
 ### How AdPilot uses Meko (agents and memory)
 
@@ -440,7 +441,7 @@ adpilot-ai/
 │   │   │   ├── iteration_policy.py  ✅ 75% exploit / 25% explore plan, insight, limitations, learnings
 │   │   ├── scripts/             ✅ reset_demo.py seed_history.py evaluate.py meko_check.py gemini_check.py gemini_ping.py make_demo_images.py export_fixtures.py
 │   │   └── assets/fonts/        ✅ Poppins, Lora (SIL Open Font License)
-│   └── tests/                   ✅ conftest.py test_api_flow.py test_video_export.py test_analytics.py test_eval.py test_ai_clip.py test_llm_providers.py test_resilience.py test_posts.py test_publishing.py (43 tests)
+│   └── tests/                   ✅ conftest.py test_api_flow.py test_video_export.py test_analytics.py test_eval.py test_ai_clip.py test_llm_providers.py test_resilience.py test_posts.py test_publishing.py (49 tests)
 ├── frontend/
 │   └── src/  pages/ (Home, NewBrand, BrandMemory, Campaigns, campaign/{Strategy,Creatives,Launch,Performance}) components/ (SocialPosts, PublishPanel, PostsHub, ConnectedAccounts, PostingInsights, SocialPerformance, ...) lib/api.ts lib/types.ts   ✅ React 18 + TypeScript + Vite + Tailwind + TanStack Query + Recharts
 └── sample_data/
@@ -558,7 +559,7 @@ cp .env.example .env            # Windows: copy .env.example .env
 #   automatically; if all are down, the offline generator still works. See GET /api/health -> providers.
 # FFmpeg: installed automatically as a pip package (imageio-ffmpeg). A system FFmpeg is used if present.
 #   Check: open http://localhost:8000/api/health and look for "ffmpeg": true
-pytest -q                          # 43 passed (offline, never uses your real keys)
+pytest -q                          # 49 passed (offline, never uses your real keys)
 python -m app.scripts.meko_check   # ends with ALL CALLS OK when Meko is configured
 python -m app.scripts.gemini_check # ends with GEMINI OK when Gemini is configured
 python -m app.scripts.evaluate     # scorecard: 14/14 checks, saved to sample_data/fixtures/eval_scorecard.json
@@ -591,7 +592,7 @@ API docs are auto-generated at `http://localhost:8000/docs`.
 
 - **AI provider chain.** Gemini first, then any configured OpenAI-compatible provider (Groq, OpenRouter, Mistral, Cerebras, a local Ollama, or a custom endpoint), then the offline generator. Each provider has its own circuit breaker, and the provider that answered is shown as the `generation_mode`.
 - **Restart recovery.** On startup, renders left "queued/rendering" by a crash are marked failed (the UI offers retry), half-created brands are removed, and a stuck Meko sync is reset. SQLite runs in WAL mode with a 30 s lock wait, and any unexpected error returns a JSON 500 that still carries CORS headers.
-- **Social posts.** One click turns a concept into a LinkedIn post, an Instagram caption (with reel/carousel idea) and an X post plus 3-post thread. Same claim guard, platform limits, edit/approve flow and export as ad copy. Drafts only.
+- **Social posts.** One click turns a concept into a LinkedIn post, an Instagram caption (with reel/carousel idea) and an X post plus 3-post thread. Each post gets its **top 5 tags**, ordered brand → product → niche → community → region (a fixed rule, not live trend data); you can add or remove each one. Same claim guard, platform limits, edit/approve flow and export as ad copy. Drafts only.
 - **Pro - AI video.** An optional second video mode that puts the verified copy and CTA over an AI-generated clip attached to the concept. Standard video stays the default.
 - **Posting intelligence.** From a brand's published posts it computes engagement (likes + 2×comments + 3×shares + clicks, over impressions) per weekday and part of the day in IST, shrinks thin cells toward the platform average, and reports the best slots, what content type and hook style works, and a plain-language summary. These feed the post prompt and the suggested time, and are written to Meko only when they change.
 - **Synthetic demo history.** `seed_history` builds Velvaa Skin, Brew & Bloom and Threadline, each with 4 past campaigns, approvals, simulated ad metrics, optimization learnings and 72 published posts. Each brand has hidden audience habits (for example a different best slot per platform) that the insights engine has to rediscover from the data, so the learning is real even though the data is not. Everything is labelled `synthetic_history` in the database, the UI and Meko.

@@ -108,8 +108,10 @@ def hook_variants(t: str, x: Ctx) -> list[str]:
             return [f"{p}. {x.price}. That's it.", f"Everything you get for {x.price}.", f"What {x.price} gets you."]
         return [f"Everything inside {p}.", "No gimmicks. Just what's inside."]
     # testimonial-style (dramatized)
-    return ["“I actually stuck with this one.”", f"“My {x.category} routine finally got shorter.”",
-            "“I didn't expect to like it this much.”"]
+    # No first-person quotes: invented customer quotes are a fake endorsement even when labelled (ASCI's 2026 AI rules
+    # list fabricated testimonials as prohibited). A relatable moment, written in the brand's voice, is safe.
+    return [f"A morning with {x.product}.", f"A {x.category} routine that fits a busy morning.",
+            f"Morning, mirror, {x.product}. Done."]
 
 
 def headline_variants(t: str, x: Ctx) -> list[str]:
@@ -171,13 +173,50 @@ def visual_brief(t: str, x: Ctx) -> VisualBrief:
                        layout=LAYOUT[t])
 
 
-def video_script(hook: str, x: Ctx, cta: str) -> list[VideoBeat]:
-    benefits = " · ".join(short_claim(c, 42) for c in x.claims[:3])
-    end = f"{cta}" + (f" · {x.price}" if x.price else "")
-    return [VideoBeat(beat="hook", seconds=3, on_screen_text=hook, voiceover=hook),
-            VideoBeat(beat="product", seconds=4, on_screen_text=x.product_full, voiceover=f"Meet {x.product_full}."),
-            VideoBeat(beat="benefit", seconds=4, on_screen_text=benefits, voiceover=". ".join(x.claims[:2]) + "."),
-            VideoBeat(beat="cta", seconds=4, on_screen_text=end, voiceover=f"{cta}.")]
+def _rot(seq: list[str], k: int) -> list[str]:
+    k = k % len(seq) if seq else 0
+    return seq[k:] + seq[:k]
+
+
+# Pace and wording differ by concept type (seconds for hook, product, benefit, cta). Only approved claims, the real
+# price and the brand's own value propositions are used, so the variety never adds a fact.
+_PACE = {"problem": (3.0, 4.0, 4.0, 4.0), "demo": (2.5, 4.0, 5.0, 3.5), "storytelling": (4.0, 4.0, 4.0, 3.5),
+         "offer": (2.5, 3.5, 3.5, 5.0), "testimonial-style": (3.5, 4.0, 4.5, 4.0)}
+
+
+def video_script(hook: str, x: Ctx, cta: str, concept_type: str = "problem") -> list[VideoBeat]:
+    t = concept_type if concept_type in _PACE else "problem"
+    sec = _PACE[t]
+    claims = list(x.claims) or list(x.value_props[:2]) or [x.brand]
+    vp = short_claim(x.value_props[0], 90) if x.value_props else x.brand
+    price = f" · {x.price}" if x.price else ""
+    if t == "problem":                     # the fix: product, then the claims in order
+        shown, said = claims[:3], f"Here's the fix: {x.product_full}."
+        vo = ". ".join(claims[:2]) + "."
+        end = f"{cta}{price}"
+    elif t == "demo":                      # lead with the second claim, as a "what it does" walk-through
+        shown = _rot(claims, 1)[:3]
+        said = f"This is {x.product_full}."
+        vo = "Here's what it does. " + ". ".join(_rot(claims, 1)[:2]) + "."
+        end = f"{cta}{price}"
+    elif t == "storytelling":              # start from the brand's own story
+        shown, said = claims[:2], f"{vp}. Meet {x.product_full}."
+        vo = f"{claims[0]}."
+        end = f"{cta}"
+    elif t == "offer":                     # price up front, fewer claims, longer call to action
+        shown, said = claims[:2], f"{x.product_full}" + (f" at {x.price}." if x.price else ".")
+        vo = f"{claims[0]}."
+        end = f"{cta}{price}"
+    else:                                  # testimonial-style: what stands out, never an invented quote
+        shown = _rot(claims, 2)[:3]
+        said = f"A closer look at {x.product_full}."
+        vo = "What stands out: " + ". ".join(_rot(claims, 2)[:2]) + "."
+        end = f"{cta}"
+    product_text = f"{x.product_full}{price}" if t == "offer" else x.product_full
+    return [VideoBeat(beat="hook", seconds=sec[0], on_screen_text=hook, voiceover=hook),
+            VideoBeat(beat="product", seconds=sec[1], on_screen_text=product_text, voiceover=said),
+            VideoBeat(beat="benefit", seconds=sec[2], on_screen_text=" · ".join(short_claim(c, 42) for c in shown), voiceover=vo),
+            VideoBeat(beat="cta", seconds=sec[3], on_screen_text=end, voiceover=f"{cta}.")]
 
 
 def offline_concept(t: str, i: int, x: Ctx) -> AdConcept:
@@ -188,7 +227,7 @@ def offline_concept(t: str, i: int, x: Ctx) -> AdConcept:
         angle=x.angles[i] if i < len(x.angles) else t,
         hook=trim_words(hook, 120)[0], primary_text=primary_variants(t, x)[0],
         headline=trim_words(headline_variants(t, x)[0], 60)[0], cta=trim_words(cta, 30)[0],
-        visual_brief=visual_brief(t, x), video_script=video_script(hook, x, cta),
+        visual_brief=visual_brief(t, x), video_script=video_script(hook, x, cta, t),
         claim_sources=["approved_claims"], rationale=f"Offline template for the '{t}' angle using approved claims only.",
     )
 
@@ -246,14 +285,14 @@ Rules:
 - hook ≤ 90 chars, headline ≤ 40 chars, cta ≤ 20 chars.
 - Use ONLY approved claims for product facts. No numbers, prices, discounts, reviews, ratings, customer counts,
   certifications or medical words unless they appear in the approved claims or price.
-- testimonial-style must start primary_text with "(Dramatization)" and must not pretend to be a real review.
+- testimonial-style must start primary_text with "(Dramatization)", must not pretend to be a real review, and must not contain any first-person customer quote.
 - offer: if no real offer exists, frame value (what you get for the real price), never invent a discount.
 - target_segment: one of the strategy segments. rationale: one short sentence."""
 
 
 def _finalize(c: AdConcept, x: Ctx, tags: list[str]) -> dict:
     if len(c.video_script) != 4:
-        c.video_script = video_script(c.hook, x, c.cta)
+        c.video_script = video_script(c.hook, x, c.cta, c.concept_type)
     fields = {"hook": c.hook, "primary_text": c.primary_text, "headline": c.headline, "cta": c.cta,
               "video_script": " ".join(b.on_screen_text for b in c.video_script)}
     flags = claim_guard(fields, x.source_text + " " + (x.price or ""), x.guardrails, c.concept_type)
@@ -287,7 +326,7 @@ def generate(profile: BrandProfile, strategy: CampaignStrategy, product_focus: s
             t = c.concept_type if c.concept_type in CONCEPT_TYPES else CONCEPT_TYPES[min(i, 4)]
             out.append(AdConcept(concept_type=t, target_segment=c.target_segment, angle=c.angle, hook=c.hook,
                                  primary_text=c.primary_text, headline=c.headline, cta=c.cta,
-                                 visual_brief=visual_brief(t, x), video_script=video_script(c.hook, x, c.cta),
+                                 visual_brief=visual_brief(t, x), video_script=video_script(c.hook, x, c.cta, t),
                                  claim_sources=["approved_claims"], rationale=c.rationale))
         return repair(ConceptBatch(concepts=out))
 
@@ -349,7 +388,7 @@ def regenerate_field(concept: dict, field_name: str, profile: BrandProfile, stra
     updated = dict(concept)
     updated[field_name] = new
     if field_name == "hook":
-        updated["video_script"] = [b.model_dump() for b in video_script(new, x, updated["cta"])]
+        updated["video_script"] = [b.model_dump() for b in video_script(new, x, updated["cta"], updated.get("concept_type", "problem"))]
     tags = hashtags(x.brand, x.category, [x.product_full, *x.claims[:3]], x.india)
     ac = AdConcept.model_validate({k: updated[k] for k in AdConcept.model_fields if k in updated})
     final = _finalize(ac, x, tags)

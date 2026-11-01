@@ -153,6 +153,43 @@ function PostEditor({ post, brandId, onChange }: { post: SocialPost; brandId: nu
         disabled={rewrite.isPending || locked}
       />
 
+      {post.hashtags.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs text-muted">
+            Top 5 tags for {post.platform === "x" ? "X" : post.platform === "linkedin" ? "LinkedIn" : "Instagram"} · brand, product, niche, community, region · {locked ? "this post is published, click a tag to copy it" : "click to add or remove"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {post.hashtags.slice(0, 5).map((tag, i) => {
+              const used = new RegExp(`${tag}(?![A-Za-z0-9])`, "i").test(text);
+              return (
+                <button
+                  key={tag}
+                  disabled={rewrite.isPending}
+                  onClick={() => {
+                    if (locked) {
+                      void copy(tag, tag);   // published posts can't change, so a click copies the tag
+                      return;
+                    }
+                    const next = used
+                      ? text.replace(new RegExp(`\\s*${tag}(?![A-Za-z0-9])`, "i"), "").trimEnd()
+                      : `${text.trimEnd()}${/#\w+$/.test(text.trimEnd()) ? " " : "\n\n"}${tag}`;
+                    setText(next);
+                    if (next.trim()) save.mutate({ text: next });
+                  }}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 text-xs ring-1 transition disabled:opacity-40",
+                    used ? "bg-white text-black ring-transparent" : "bg-transparent text-muted ring-line hover:text-ink hover:ring-white/30",
+                  )}
+                  title={locked ? "Click to copy this tag" : used ? "In the post. Click to remove." : "Not in the post. Click to add."}
+                >
+                  <span className="mr-1 opacity-50">{i + 1}</span>{tag}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {post.thread.length > 0 && (
         <div>
           <p className="mb-2 text-xs text-muted">Thread · reply to your first post with these</p>

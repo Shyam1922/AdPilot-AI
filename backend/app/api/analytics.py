@@ -10,7 +10,7 @@ from sqlmodel import Session, delete, select
 from ..db import get_session
 from ..models import Campaign, Concept, Iteration, MetricSnapshot
 from ..serializers import iteration_out
-from ..services import ad_generator, concept_ranker, iteration_policy, metrics_calculator
+from ..services import ad_generator, concept_ranker, iteration_policy, metrics_calculator, trend_model
 from ..services.meko_sync import save_learnings_job
 from .common import audit, brand_context, get_or_404, guardrail_list, touch
 
@@ -106,6 +106,7 @@ def analytics(campaign_id: int, session: Session = Depends(get_session)) -> dict
         "is_simulated": "simulated" in sources, "data_sources": sources,
         "totals": metrics_calculator.totals(per), "by_concept": by_concept,
         "daily": metrics_calculator.daily(rows), "clear_winner": concept_ranker.clear_winner(ranked),
+        "model": trend_model.analyse(per, rows, concepts, metric) if rows else None,
         "warnings": warnings,
     }
 
@@ -134,6 +135,7 @@ def iterate(campaign_id: int, background: BackgroundTasks, req: IterateRequest =
     session.commit()
     session.refresh(it)
 
+    model = trend_model.analyse(per, rows, concepts, metric)       # what the data says about layouts and audiences
     segments = [s.name for s in strategy.segments] or [concepts[next(iter(concepts))].target_segment]
     modes = set()
     for spec in specs:
@@ -147,11 +149,15 @@ def iterate(campaign_id: int, background: BackgroundTasks, req: IterateRequest =
                                                         guardrail_list(brand), brand.sources)
                 modes.add(mode)
             elif change == "layout":
-                d["visual_brief"] = {**d["visual_brief"],
-                                     "layout": iteration_policy.next_layout(d["visual_brief"].get("layout", "hero"))}
+                cur = d["visual_brief"].get("layout", "hero")
+                learned = trend_model.best_value(model["effects"], "layout", exclude=cur)
+                d["visual_brief"] = {**d["visual_brief"], "layout": learned or iteration_policy.next_layout(cur)}
             elif change == "segment":
                 others = [s for s in segments if s != d["target_segment"]]
-                if others:
+                learned = trend_model.best_value(model["effects"], "audience", exclude=d["target_segment"])
+                if learned in others:
+                    d["target_segment"] = learned
+                elif others:
                     d["target_segment"] = others[0]
         session.add(Concept(
             campaign_id=camp.id, iteration_id=it.id, parent_concept_id=parent.id,
@@ -165,7 +171,9 @@ def iterate(campaign_id: int, background: BackgroundTasks, req: IterateRequest =
     session.add(it)
 
     # Brand Memory learns (locally, and in Meko via the analyst agent).
-    new_learnings = iteration_policy.learnings(ranked, concepts, metric, sources)
+    new_learnings = iteration_policy.learnings(ranked, concepts, metric, sources) + [
+        f"{n} ({'simulated' if 'simulated' in sources else 'imported'} data, association only)" for n in model["notes"][:2]
+        if not n.startswith("No trait")]
     stamp = datetime.now(timezone.utc).isoformat()
     brand.learnings = [*brand.learnings, *[{"text": t, "iteration_id": it.id, "data_source": sources[0] if sources else "",
                                            "created_at": stamp} for t in new_learnings]][-30:]

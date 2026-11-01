@@ -63,3 +63,43 @@ def test_video_options_pro_tier(client, tmp_path):
     m = {x["mode"]: x for x in client.get(f"/api/concepts/{cid}/video-options").json()["modes"]}
     assert m["ai_clip"]["available"]
     assert client.get("/api/concepts/99999/video-options").status_code == 404
+
+
+def test_ai_prompt_is_a_shot_list_without_text(client):
+    b = client.post("/api/brands/analyze", json={"url": "https://demo.adpilot.local/"}).json()
+    camp = client.post("/api/campaigns", json={"brand_id": b["id"], "objective": "sales"}).json()
+    cs = client.post(f"/api/campaigns/{camp['id']}/concepts/generate", json={}).json()
+    prompts = {c["concept_type"]: client.get(f"/api/concepts/{c['id']}/ai-prompt").json()["prompt"] for c in cs}
+    p = next(iter(prompts.values()))
+    assert "Shot 1" in p and "Shot 2" in p and "Shot 3" in p
+    assert "No on-screen text" in p and "attached product photo" in p
+    assert len(set(prompts.values())) == len(prompts)        # each concept type gets its own prompt
+
+    assert "first frame" in p
+
+
+def test_ai_prompt_uses_the_directors_shots_when_a_model_is_available(monkeypatch):
+    from app.services import ai_prompt, llm
+
+    plan = ai_prompt._Plan(shots=[ai_prompt._Shot(action="Condensation slides down a cold steel bottle", camera="slow dolly-in", light="harsh noon sun"),
+                                  ai_prompt._Shot(action="A hand lifts the bottle and tilts it", camera="macro orbit", light="rim light"),
+                                  ai_prompt._Shot(action="The hand sets it down on a wet railing", camera="pull-back", light="golden hour")])
+    monkeypatch.setattr(llm, "available_providers", lambda: ["gemini"])
+    monkeypatch.setattr(llm, "generate_json", lambda *a, **k: llm.LLMResult(plan, "gemini", [], 1, "m"))
+    out = ai_prompt.build("problem", "Brand", "Bottle", "beverage", "commuters", ["bold"], ["red"], hook="Stay cool")
+    assert out["directed_by"] == "ai" and "Condensation slides" in out["prompt"]
+    assert "golden hour" in out["prompt"] and "first frame" in out["prompt"]
+
+
+def test_video_scripts_differ_by_concept_type(client):
+    b = client.post("/api/brands/analyze", json={"url": "https://demo.adpilot.local/"}).json()
+    camp = client.post("/api/campaigns", json={"brand_id": b["id"], "objective": "sales"}).json()
+    cs = client.post(f"/api/campaigns/{camp['id']}/concepts/generate", json={}).json()
+    sig = {}
+    for c in cs:
+        beats = c["video_script"]
+        assert [x["beat"] for x in beats] == ["hook", "product", "benefit", "cta"]       # the renderer needs these four
+        assert 13 <= sum(x["seconds"] for x in beats) <= 17
+        sig[c["concept_type"]] = (tuple(x["seconds"] for x in beats), beats[2]["on_screen_text"], beats[1]["voiceover"])
+    assert len(set(sig.values())) == len(sig) >= 4                                     # each type gets its own script
+    assert len({v[0] for v in sig.values()}) >= 4                                      # and its own pacing

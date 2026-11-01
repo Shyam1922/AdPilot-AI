@@ -87,7 +87,8 @@ export default function Launch() {
         </div>
       </Card>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 space-y-6">
         <Card title={`Approved creatives · ${approved.length}`}>
           {approved.length === 0 ? (
             <EmptyState
@@ -134,13 +135,11 @@ export default function Launch() {
             <span className="text-xs text-muted">Copy CSV, strategy and MP4s for manual upload to any platform.</span>
           </div>
         </Card>
-
-        <Integrations />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
         <PostsHub campaignId={c.id} brandId={c.brand_id} base={base} />
-        <div className="space-y-6">
+        </div>
+
+        <div className="min-w-0 space-y-6">
+          <Integrations />
           <ConnectedAccounts brandId={c.brand_id} />
           <PostingInsightsCard brandId={c.brand_id} withHeatmap={false} />
         </div>

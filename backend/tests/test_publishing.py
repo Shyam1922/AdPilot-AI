@@ -104,3 +104,40 @@ def test_connect_socials(client):
     left = client.delete(f"{base}/x").json()
     assert [s["connected"] for s in left] == [True, True, False] or sum(s["connected"] for s in left) == 2
 
+
+
+def test_top_five_tags_are_unique_ordered_and_platform_specific():
+    from app.services import tag_picker
+
+    d = ["#VelvaaSkin", "#Skincare", "#IndianSkincare", "#FragranceFree", "#Niacinamide", "#MadeInIndia", "#D2CIndia"]
+    ig = tag_picker.pick("instagram", "Velvaa Skin", "skincare", d, True)
+    li = tag_picker.pick("linkedin", "Velvaa Skin", "skincare", d, True)
+    assert len(ig) == 5 and len(li) == 5 and len({t.lower() for t in ig}) == 5
+    assert ig[0] == "#VelvaaSkin" and ig[1] in ("#FragranceFree", "#Niacinamide")      # brand first, then a product tag
+    assert "#BeautyIndustry" in li and ig != li                                         # LinkedIn leans professional
+    assert len(tag_picker.pick("x", "Odd Co", "gadgets", [], False)) == 5               # unknown category still gets 5
+
+
+def test_promotion_policy_holds_weak_learnings_and_traces_the_decision(monkeypatch):
+    from app.services import meko_memory as mm
+
+    assert mm.promotion_policy("Offer angle led on CTR (1.65%, directional, simulated data) with hook X.")[0]
+    assert not mm.promotion_policy("Demo angle was lowest on CTR (0.9%, insufficient data, imported data).")[0]
+
+    calls = []
+
+    class Fake:
+        def conversation(self, agent, dp, title):
+            return "c1"
+
+        def call(self, tool, args):
+            calls.append((tool, args))
+            return {"id": f"m{len(calls)}"}
+
+    monkeypatch.setattr(mm, "_run", lambda fn, timeout=None, attempts=2: fn(Fake()))
+    out = mm.save_learnings("dp1", ["Offer angle led on CTR (1.65%, directional, imported data) with a clear hook.",
+                                    "Demo angle was lowest on CTR (0.9%, insufficient data, imported data) so far."], brand="B")
+    assert out["promoted_count"] == 1 and out["held_count"] == 1
+    promote = next(a for t, a in calls if t == "memory_promote")
+    assert len(promote["memory_ids"]) == 1                                   # only the approved one
+    assert any(t == "conversation_add_message" and "held" in a["output"] for t, a in calls)

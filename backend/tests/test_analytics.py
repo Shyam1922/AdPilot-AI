@@ -66,4 +66,25 @@ def test_optimization_loop(client):
     assert all(v["parent_concept_id"] and v["changed_variables"] and v["rationale"] for v in it["variants"])
     assert any("SIMULATED" in l for l in it["limitations"]) and any("correlation" in l for l in it["limitations"])
     brand = client.get(f"/api/brands/{b['id']}").json()
-    assert len(brand["learnings"]) == 2 and "simulated" in brand["learnings"][0]["text"]
+    assert len(brand["learnings"]) >= 2 and "simulated" in brand["learnings"][0]["text"]
+
+
+def test_trend_model_learns_traits_and_trends():
+    from types import SimpleNamespace as NS
+
+    from app.services import trend_model
+
+    def ad(t, seg, layout, hook):
+        return NS(concept_type=t, target_segment=seg, visual_brief={"layout": layout}, hook=hook, cta="Shop now")
+
+    concepts = {1: ad("offer", "A", "split", "Get 20% off"), 2: ad("demo", "B", "hero", "See it work"),
+                3: ad("story", "A", "split", "Why we started"), 4: ad("demo", "B", "hero", "Skin that lasts")}
+    per = {1: {"impressions": 20000, "clicks": 600, "conversions": 30}, 2: {"impressions": 20000, "clicks": 200, "conversions": 10},
+           3: {"impressions": 20000, "clicks": 560, "conversions": 28}, 4: {"impressions": 20000, "clicks": 220, "conversions": 11}}
+    rows = [NS(concept_id=1, day=f"2026-10-{d:02d}", impressions=1000, clicks=10 + 4 * d, conversions=1) for d in range(1, 8)]
+    out = trend_model.analyse(per, rows, concepts, "ctr")
+    top = out["effects"][0]
+    assert top["p_better"] > 0.8 and top["trait"] in ("layout", "audience", "angle", "hook style")
+    assert trend_model.best_value(out["effects"], "layout", exclude="hero") == "split"
+    assert out["trends"][0]["verdict"] == "rising"
+    assert trend_model.analyse({}, [], {}, "ctr")["effects"] == []

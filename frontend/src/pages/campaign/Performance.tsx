@@ -7,7 +7,7 @@ import { api, errorMessage } from "@/lib/api";
 import { cn, inr, mult, num, pct } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { Card, EmptyState, ErrorState, ModeBadge, Skeleton, SourceBadge, Spinner } from "@/components/ui";
-import type { Analytics, Iteration, SampleStatus } from "@/lib/types";
+import type { Analytics, Iteration, SampleStatus, TrendModel } from "@/lib/types";
 import SocialPerformance from "@/components/SocialPerformance";
 import { MemoryCard, PostingInsightsCard } from "@/components/PostingInsights";
 import { useCampaign } from "../Campaign";
@@ -54,7 +54,7 @@ export default function Performance() {
       ) : (
         <>
           <Overview a={analytics.data} />
-          <Optimization iterations={detail.iterations} campaignId={id} />
+          <Optimization iterations={detail.iterations} campaignId={id} model={analytics.data.model ?? null} />
         </>
       )}
     </div>
@@ -275,7 +275,7 @@ function Kpi({ label, value, sub, highlight }: { label: string; value: string; s
   );
 }
 
-function Optimization({ iterations, campaignId }: { iterations: Iteration[]; campaignId: number }) {
+function Optimization({ iterations, campaignId, model }: { iterations: Iteration[]; campaignId: number; model: TrendModel | null }) {
   const { detail } = useCampaign();
   const qc = useQueryClient();
   const toast = useToast();
@@ -300,9 +300,53 @@ function Optimization({ iterations, campaignId }: { iterations: Iteration[]; cam
           {iterate.isPending ? <Spinner /> : <Sparkles className="h-4 w-4" />} {iterate.isPending ? "Analyzing…" : "Run optimization"}
         </button>
       </div>
+      {model && <LearnedModel m={model} />}
       {[...iterations].reverse().map((it, i) => (
         <IterationCard key={it.id} it={it} round={iterations.length - i} />
       ))}
+    </section>
+  );
+}
+
+/** What the small statistical model learned from the results: which traits beat the average, and which ads are rising or fading. */
+function LearnedModel({ m }: { m: TrendModel }) {
+  const effects = m.effects.filter((e) => e.ads >= 1).slice(0, 8);
+  return (
+    <section className="card p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-[15px] font-medium text-white">What the model learned</h3>
+        <span className="text-xs text-muted">Bayesian trait effects + daily trend · {m.metric_label}</span>
+      </div>
+      <ul className="space-y-1.5 text-sm text-body">
+        {m.notes.map((n) => (
+          <li key={n} className="flex gap-2"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-white/60" />{n}</li>
+        ))}
+      </ul>
+      {effects.length > 0 && (
+        <div className="mt-5 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+          {effects.map((e) => (
+            <div key={`${e.trait}-${e.value}`} className="text-xs">
+              <div className="mb-1 flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-body"><span className="text-muted">{e.trait}</span> · {e.value}</span>
+                <span className={cn("shrink-0 tabular-nums", e.lift >= 0 ? "text-emerald-300" : "text-rose-300")}>{e.lift >= 0 ? "+" : ""}{(e.lift * 100).toFixed(0)}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]" title={`P(better than average) ${(e.p_better * 100).toFixed(0)}%`}>
+                <div className={cn("h-full rounded-full transition-all duration-700", e.p_better >= 0.5 ? "bg-white/80" : "bg-white/25")} style={{ width: `${Math.round(e.p_better * 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {m.trends.some((t) => t.verdict !== "flat") && (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {m.trends.filter((t) => t.verdict !== "flat").map((t) => (
+            <span key={t.concept_id} className={cn("rounded-lg px-2.5 py-1 text-xs ring-1", t.verdict === "rising" ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20" : "bg-rose-400/10 text-rose-300 ring-rose-400/20")}>
+              {t.label} {t.verdict === "rising" ? "↑ rising" : "↓ fading"}
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="mt-4 text-xs text-muted">{m.method} The next batch uses these effects to pick layouts and audiences. Bar length is the chance a trait beats the average.</p>
     </section>
   );
 }

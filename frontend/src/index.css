@@ -44,12 +44,75 @@ body {
   }
 }
 
+/* ------------------------------ motion ------------------------------ */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(3%, 2%, 0) scale(1.08); }
+}
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* A very soft glow that drifts behind every page, like a lit stage. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20% -10% auto -10%;
+  height: 70vh;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(40% 50% at 30% 30%, rgba(60, 86, 140, 0.16), transparent 70%),
+    radial-gradient(35% 45% at 75% 20%, rgba(120, 80, 160, 0.1), transparent 70%);
+  animation: drift 22s ease-in-out infinite;
+}
+
+.page-in {
+  animation: fade 0.35s ease both;
+}
+
+/* Cards rise in one after another; a spotlight follows the pointer over them. */
+.card {
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.card:nth-child(2) { animation-delay: 0.05s; }
+.card:nth-child(3) { animation-delay: 0.1s; }
+.card:nth-child(4) { animation-delay: 0.15s; }
+.card:nth-child(5) { animation-delay: 0.2s; }
+.card:nth-child(n + 6) { animation-delay: 0.25s; }
+.card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background-image: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.045), transparent 45%);
+}
+.shimmer {
+  background: linear-gradient(100deg, #111315 30%, #1c1e22 50%, #111315 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.lift {
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.2s, background-color 0.2s;
+}
+.lift:hover {
+  transform: translateY(-4px);
+}
+
 @layer components {
   .card {
-    @apply rounded-2xl border border-line bg-surface;
+    @apply rounded-2xl border border-line bg-surface transition-[border-color,background-color] duration-200;
   }
   .btn {
-    @apply inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-sm font-medium tracking-nav transition disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-sm font-medium tracking-nav transition duration-150 enabled:active:scale-[0.97] hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-primary {
     @apply btn bg-white text-black hover:bg-white/85;

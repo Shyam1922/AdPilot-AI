@@ -40,7 +40,7 @@ export default function Strategy() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Card title="Creative direction">
           <ChipGroup label="Themes" items={s.campaign_themes} />
           <ChipGroup label="Angles" items={s.creative_angles} />
@@ -75,7 +75,7 @@ export default function Strategy() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Card title="Assumptions">
           <ul className="space-y-2 text-sm text-ink/80">
             {s.assumptions.map((a) => (

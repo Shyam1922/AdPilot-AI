@@ -6,7 +6,7 @@ import Logo from "./Logo";
 export default function TopBar({ nav, right }: { nav?: ReactNode; right?: ReactNode }) {
   return (
     <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-black/70 backdrop-blur-xl backdrop-saturate-150">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6 md:grid md:grid-cols-[1fr_auto_1fr]">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6 md:grid md:grid-cols-[1fr_auto_1fr]">
         <Link to="/" className="mr-auto md:mr-0 md:justify-self-start">
           <Logo />
         </Link>

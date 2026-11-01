@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import { TopProgress, useCardSpotlight } from "./components/Fx";
 
 // Pages load on demand, so heavy dependencies (Recharts) only ship with the page that uses them.
 const Home = lazy(() => import("./pages/Home"));
@@ -15,7 +16,10 @@ const Performance = lazy(() => import("./pages/campaign/Performance"));
 
 // Routes follow the backend's entities: Brand → Campaign → (strategy, concepts, export, metrics).
 export default function App() {
+  useCardSpotlight();
   return (
+    <>
+    <TopProgress />
     <Suspense fallback={<div className="min-h-screen bg-canvas" />}>
       <Routes>
         <Route path="/" element={<Home />} />
@@ -34,5 +38,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </>
   );
 }

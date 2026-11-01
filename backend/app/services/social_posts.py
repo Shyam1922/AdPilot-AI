@@ -16,12 +16,14 @@ from ..schemas.brand import BrandProfile
 from ..schemas.concept import CampaignStrategy
 from . import llm
 from .ad_generator import Ctx, build_ctx
+from . import tag_picker
 from .output_validation import claim_guard, hashtags
 from .text_utils import short_claim
 
 PLATFORMS = ("linkedin", "instagram", "x")
 LIMITS = {"linkedin": 3000, "instagram": 2200, "x": 280}
-TAG_MAX = {"linkedin": 4, "instagram": 10, "x": 2}
+TAG_MAX = {"linkedin": 5, "instagram": 5, "x": 2}          # how many of the top 5 go inside the post text
+TOP_TAGS = 5
 X_URL_LEN = 23     # X counts every link as 23 characters
 POST_PROMPT_VERSION = "posts-v1"
 
@@ -114,17 +116,16 @@ Craft rules (these decide whether people stop scrolling):
 - One idea per post. Concrete beats generic: name the moment (a humid 3pm, a 10-step routine), not "great results".
 - Write like a person: short sentences, line breaks, no corporate filler, no stacked exclamation marks.
 - End by inviting a reply (a real question) and one clear CTA.
-- linkedin: 700-1200 characters, founder/brand voice, a small insight or story, 3-4 short paragraphs or → bullets, at most 4 hashtags, at most 1-2 emoji.
-- instagram: first 125 characters carry the hook, friendly and visual, line breaks, 3-6 emoji, a save/share prompt, 6-10 hashtags, CTA "link in bio". Add visual_idea (reel or carousel plan).
-- x: body at most 240 characters incl. the CTA, punchy, at most 2 hashtags, plus a thread of exactly 3 follow-up posts (each at most 260 characters) that expand the claims.
+- linkedin: 700-1200 characters, founder/brand voice, a small insight or story, 3-4 short paragraphs or → bullets, no hashtags (the app adds them), at most 1-2 emoji.
+- instagram: first 125 characters carry the hook, friendly and visual, line breaks, 3-6 emoji, a save/share prompt, no hashtags (the app adds them), CTA "link in bio". Add visual_idea (reel or carousel plan).
+- x: body at most 240 characters incl. the CTA, punchy, no hashtags (the app adds them), plus a thread of exactly 3 follow-up posts (each at most 260 characters) that expand the claims.
 - Facts only from the approved claims and the real price. NEVER invent numbers, discounts, reviews, ratings, customer counts, awards or medical outcomes. Do not write fake customer quotes.
-- hashtags: array of strings starting with #, not repeated inside body."""
+- Do not write hashtags anywhere; leave the hashtags array empty. The app adds the 5 best tags itself."""
 
 
 def _compose(p: PostCopy, x: Ctx, tags: list[str]) -> tuple[str, list[str], list[str]]:
     """Final text, hashtags used, thread, with the platform's limits applied."""
-    tl = [t if t.startswith("#") else "#" + t for t in (p.hashtags or tags)]
-    tl = list(dict.fromkeys(tl))[:TAG_MAX[p.platform]]
+    tl = list(dict.fromkeys(tags))[:TAG_MAX[p.platform]]        # the system's top tags, in order; model-written tags are ignored
     body = p.body.strip()
     for t in tl:                                   # don't repeat tags that the model already wrote inline
         body = re.sub(rf"\s*{re.escape(t)}\b", "", body, flags=re.I) if body.count(t) > 1 else body
@@ -139,6 +140,7 @@ def _x_len(text: str) -> int:
 
 def finalize(p: PostCopy, concept: dict, x: Ctx, tags: list[str]) -> dict:
     text, tl, thread = _compose(p, x, tags)
+    top = list(tags[:TOP_TAGS])
     flags = claim_guard({"post": text, **{f"thread_{i+1}": t for i, t in enumerate(thread)}},
                         x.source_text + " " + (x.price or ""), x.guardrails, "")
     if p.platform == "x":
@@ -156,7 +158,7 @@ def finalize(p: PostCopy, concept: dict, x: Ctx, tags: list[str]) -> dict:
         flags.append({"code": "trimmed", "severity": "info", "field": "post",
                       "message": f"Trimmed to fit {p.platform}'s {LIMITS[p.platform]}-character limit."})
     chars = _x_len(text) if p.platform == "x" else len(text)
-    return {"platform": p.platform, "hook": p.hook, "text": text, "hashtags": tl, "thread": thread,
+    return {"platform": p.platform, "hook": p.hook, "text": text, "hashtags": top, "thread": thread,
             "visual_idea": p.visual_idea, "cta": p.cta, "risk_flags": flags, "char_count": chars,
             "char_limit": LIMITS[p.platform]}
 
@@ -166,7 +168,8 @@ def generate(concept: dict, profile: BrandProfile, strategy: CampaignStrategy, p
              language: str = "en", memory_context: str = "", variant: int = 0) -> tuple[list[dict], str, list[str]]:
     x = build_ctx(profile, strategy, product_focus, guardrails, sources, language)
     platforms = [p for p in PLATFORMS if p in platforms] or list(PLATFORMS)
-    tags = hashtags(x.brand, x.category, [x.product_full, *x.claims[:3]], x.india)
+    derived = hashtags(x.brand, x.category, [x.product_full, *x.claims[:3]], x.india)
+    tags_by = {pl: tag_picker.pick(pl, x.brand, x.category, derived, x.india) for pl in platforms}
 
     def offline() -> PostBatch:
         return PostBatch(posts=[offline_post(p, concept, x, website, variant) for p in platforms])
@@ -179,5 +182,5 @@ def generate(concept: dict, profile: BrandProfile, strategy: CampaignStrategy, p
     posts = []
     for plat in platforms:
         p = by_platform.get(plat) or offline_post(plat, concept, x, website, variant)
-        posts.append(finalize(p, concept, x, tags))
+        posts.append(finalize(p, concept, x, tags_by[plat]))
     return posts, res.mode, list(res.warnings)

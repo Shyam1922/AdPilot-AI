@@ -68,3 +68,26 @@ def test_export_includes_approved_posts(client):
     r = client.get(f"/api/campaigns/{camp_id}/export")
     names = zipfile.ZipFile(io.BytesIO(r.content)).namelist()
     assert "social_posts.json" in names and any(n.startswith("social_posts/instagram_") for n in names)
+
+
+def test_delete_brand_removes_everything_under_it(client):
+    from sqlmodel import Session, select
+
+    from app.db import engine
+    from app.models import Campaign, Concept, SocialPost
+
+    brand_id = client.post("/api/brands/analyze", json={"url": "https://demo.adpilot.local/"}).json()["id"]
+    camp_id = client.post("/api/campaigns", json={"brand_id": brand_id, "objective": "sales"}).json()["id"]
+    cs = client.post(f"/api/campaigns/{camp_id}/concepts/generate", json={}).json()
+    client.post(f"/api/concepts/{cs[0]['id']}/posts/generate", json={})
+    keep = client.post("/api/brands/analyze", json={"url": "https://demo.adpilot.local/"}).json()["id"]
+
+    assert client.delete(f"/api/brands/{brand_id}").status_code == 204
+    assert client.get(f"/api/brands/{brand_id}").status_code == 404
+    assert client.get(f"/api/campaigns/{camp_id}").status_code == 404
+    assert client.delete(f"/api/brands/{brand_id}").status_code == 404
+    assert client.get(f"/api/brands/{keep}").status_code == 200          # other brands untouched
+    with Session(engine) as s:
+        assert not s.exec(select(Campaign).where(Campaign.brand_id == brand_id)).all()
+        assert not s.exec(select(Concept).where(Concept.campaign_id == camp_id)).all()
+        assert not s.exec(select(SocialPost).where(SocialPost.campaign_id == camp_id)).all()

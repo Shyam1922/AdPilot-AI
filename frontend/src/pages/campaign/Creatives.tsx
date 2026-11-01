@@ -257,7 +257,7 @@ function ConceptDetail({ concept, campaignId, brandId }: { concept: Concept; cam
         )}
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <PlatformCopy concept={concept} />
         <VideoPanel concept={concept} campaignId={campaignId} />
       </div>
@@ -509,6 +509,40 @@ function VideoPanel({ concept, campaignId }: { concept: Concept; campaignId: num
 }
 
 /** Standard (template motion video) vs Pro (the same verified copy over an AI-generated clip). */
+/** A ready-to-paste prompt for any AI video tool; the finished clip is attached above as Pro video. */
+function AiPrompt({ conceptId }: { conceptId: number }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const q = useQuery({ queryKey: ["ai-prompt", conceptId], queryFn: () => api.aiClipPrompt(conceptId), enabled: open });
+  const copy = async () => {
+    if (!q.data) return;
+    try {
+      await navigator.clipboard.writeText(q.data.prompt);
+      toast.success("Prompt copied. Paste it into your AI video tool.");
+    } catch {
+      toast.error("Couldn't copy. Select the text and copy it manually.");
+    }
+  };
+  return (
+    <div className="text-xs">
+      <button className="text-muted underline decoration-dotted underline-offset-2 hover:text-ink" onClick={() => setOpen((o) => !o)}>
+        {open ? "Hide AI video prompt" : "Get a prompt for an AI video tool"}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 rounded-xl bg-surface-2 p-3">
+          {q.isLoading && <Spinner />}
+          {q.data && (
+            <>
+              <p className="whitespace-pre-wrap leading-relaxed text-ink/90">{q.data.prompt}</p>
+              <button className="btn-ghost h-8 px-3 text-xs" onClick={copy}>Copy prompt</button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function VideoModes({ conceptId, mode, setMode, proReady }: { conceptId: number; mode: VideoMode; setMode: (m: VideoMode) => void; proReady: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -575,6 +609,7 @@ function VideoModes({ conceptId, mode, setMode, proReady }: { conceptId: number;
           </button>
         )}
       </div>
+      <AiPrompt conceptId={conceptId} />
     </div>
   );
 }

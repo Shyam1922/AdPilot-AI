@@ -378,28 +378,52 @@ def log_generation(datapack_id: str, conversation_id: str | None, campaign_name:
     return _run(go, timeout=45)
 
 
+def promotion_policy(text: str) -> tuple[bool, str]:
+    """Code decides what becomes shared knowledge, not the model. A learning is held back (kept private to the
+    analyst agent) when it rests on too little data, so a weak guess can't steer every other agent."""
+    t = (text or "").lower()
+    if "insufficient data" in t:
+        return False, "held: too little data to rely on"
+    if len(t.strip()) < 25:
+        return False, "held: too short to be a usable learning"
+    return True, "promoted: states its data source and a usable sample"
+
+
 def save_learnings(datapack_id: str, learnings: list[str], kind: str = "learning",
                    title: str = "Optimization learnings", brand: str = "") -> dict | None:
-    """Analyst agent stores what worked, then promotes it so every agent can use it."""
+    """Analyst agent stores every learning (private), promotes only those the policy approves, and writes the
+    decision (what was promoted, what was held and why) into the conversation trace."""
     def go(s: _Session):
         agent = AGENTS["analyst"]
         cid = s.conversation(agent, datapack_id, title)
-        ids = []
+        ids, approved, held = [], [], []
         for text in learnings:
+            ok, why = promotion_policy(text)
             r = s.call("memory_add", {"text": tag(brand, text), "agent_id": agent, "datapack_id": datapack_id,
                                       "conversation_id": cid,
-                                      "metadata": {"source": "adpilot", "kind": kind, "brand": brand}})
+                                      "metadata": {"source": "adpilot", "kind": kind, "brand": brand,
+                                                   "promotion": "promoted" if ok else "held"}})
             mid = _find_id(r, "memory_id", "id")
             if mid:
                 ids.append(mid)
+                (approved if ok else held).append((mid, why, text))
         promoted = None
-        if ids:
+        if approved:
             try:
-                promoted = s.call("memory_promote", {"memory_ids": ids, "agent_id": agent, "conversation_id": cid,
-                                                     "datapack_id": datapack_id})
+                promoted = s.call("memory_promote", {"memory_ids": [m for m, _, _ in approved], "agent_id": agent,
+                                                     "conversation_id": cid, "datapack_id": datapack_id})
             except MekoError as exc:  # promotion needs owner/maintainer rights; keep the memories anyway
                 promoted = {"error": str(exc)}
-        return {"memories_added": len(learnings), "memory_ids": ids, "promoted": promoted, "conversation_id": cid}
+        try:                                          # the decision itself is part of the trace
+            lines = [f"- {why}: {text[:140]}" for _, why, text in [*approved, *held]]
+            s.call("conversation_add_message", {"conversation_id": cid, "agent_id": agent, "datapack_id": datapack_id,
+                                                "input": f"Promotion policy for {len(learnings)} learning(s)",
+                                                "output": "\n".join(lines) or "nothing to promote",
+                                                "plan": ["store privately", "apply promotion policy", "promote approved"]})
+        except MekoError:
+            pass
+        return {"memories_added": len(learnings), "memory_ids": ids, "promoted": promoted,
+                "promoted_count": len(approved), "held_count": len(held), "conversation_id": cid}
 
     return _run(go, timeout=60)
 

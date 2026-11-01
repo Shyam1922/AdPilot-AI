@@ -27,7 +27,7 @@ export default function Home() {
       {health.isError ? (
         <ApiOffline onRetry={() => health.refetch()} />
       ) : (
-        <div className="mx-auto max-w-6xl px-4 pb-24 pt-14 sm:px-6 sm:pt-20">
+        <div className="mx-auto max-w-7xl px-4 pb-24 pt-14 sm:px-6 sm:pt-20">
           <div className="mx-auto max-w-2xl text-center">
             <h1 className="display text-[40px] leading-[1.02] sm:text-[54px]">Your brands</h1>
             <p className="mt-4 text-[17px] text-muted">Each brand keeps its own memory: products, claims, tone and what has worked.</p>
@@ -41,7 +41,7 @@ export default function Home() {
             )}
             {(health.isLoading || brands.isLoading) && [0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[4/3]" />)}
             {brands.data?.map((b) => (
-              <Link key={b.id} to={`/brands/${b.id}`} className="group">
+              <Link key={b.id} to={`/brands/${b.id}`} className="group lift" style={{ animation: `rise 0.5s ${Math.min(brands.data!.indexOf(b), 8) * 0.06}s both` }}>
                 <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-line bg-surface transition group-hover:border-white/20 group-hover:bg-surface-2">
                   {b.logo_url ? (
                     <img src={fileUrl(b.logo_url)} alt="" className="h-20 w-20 rounded-2xl bg-white object-contain p-2" />

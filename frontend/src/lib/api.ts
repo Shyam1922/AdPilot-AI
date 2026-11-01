@@ -123,6 +123,8 @@ export const api = {
     request<{ modes: VideoOption[] }>(`/api/concepts/${conceptId}/video-options`),
   uploadAiClip: (conceptId: number, file: File) =>
     request<Asset>(`/api/concepts/${conceptId}/ai-clip`, multipart({ file })),
+  aiClipPrompt: (conceptId: number) =>
+    request<{ prompt: string }>(`/api/concepts/${conceptId}/ai-prompt`),
   removeAiClip: (conceptId: number) => request<void>(`/api/concepts/${conceptId}/ai-clip`, { method: "DELETE" }),
 
   // Social posts (drafts only; nothing is published)

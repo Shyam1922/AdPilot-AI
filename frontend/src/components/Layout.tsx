@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { api } from "@/lib/api";
@@ -9,6 +9,7 @@ import TopBar from "./TopBar";
 
 export default function Layout() {
   const { brandId } = useParams();
+  const { pathname } = useLocation();
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, retry: false });
 
   if (health.isError) {
@@ -42,15 +43,15 @@ export default function Layout() {
       />
 
       <main className="flex-1">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
           <Suspense fallback={<PageFallback />}>
-            <Outlet />
+            <div key={pathname} className="page-in"><Outlet /></div>
           </Suspense>
         </div>
       </main>
 
       <footer className="border-t border-white/[0.08]">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-5 text-xs text-muted sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-5 text-xs text-muted sm:px-6">
           <StatusRow ok={!!health.data && health.data.llm_provider !== "offline"} label={health.data ? (health.data.llm_provider === "offline" ? "Offline generator" : health.data.llm_provider.replace(/^\w/, (c) => c.toUpperCase())) : "…"} prefix="LLM" />
           <StatusRow ok={!!health.data?.ffmpeg} label={health.data ? (health.data.ffmpeg ? "FFmpeg ready" : "FFmpeg missing") : "…"} prefix="Video" />
           <span className="w-full sm:ml-auto sm:w-auto">Nothing is published and no money is spent without your approval.</span>

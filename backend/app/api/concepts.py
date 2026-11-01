@@ -11,7 +11,7 @@ from ..db import get_session
 from ..models import Campaign, Concept
 from ..schemas.concept import ConceptUpdate
 from ..serializers import concept_out, latest_videos
-from ..services import ad_generator, meko_memory
+from ..services import ad_generator, ai_prompt, meko_memory
 from ..services.meko_sync import datapack_for, log_generation_job
 from .common import audit, brand_context, get_or_404, guardrail_list, touch
 
@@ -188,22 +188,17 @@ def ai_clip_prompt(concept_id: int, session: Session = Depends(get_session)) -> 
     c = get_or_404(session, Concept, concept_id)
     camp = get_or_404(session, Campaign, c.campaign_id)
     brand, profile, _ = brand_context(session, camp)
-    vb = c.visual_brief or {}
     product = camp.product_focus or profile.product_name
-    prompt = (
-        f"Vertical 9:16 video, 8 seconds, cinematic product ad for {brand.name}'s {product}. "
-        f"Scene: {vb.get('scene', 'product hero shot')}. "
-        f"Product: use the attached reference photo exactly; keep the shape, colour, label and logo unchanged and "
-        f"never invent a different product. Composition: {vb.get('composition', 'product in the middle third')}. "
-        f"Style: {vb.get('style') or 'clean, premium'}; brand colours; soft natural lighting. "
-        f"Camera: slow push-in with gentle parallax. Leave the top 25% and bottom 30% of the frame visually calm. "
-        f"No on-screen text, no captions, no logos other than the product's own, no people speaking, no music with lyrics."
-    )
-    return {"concept_id": c.id, "prompt": prompt, "duration_s": 8, "aspect_ratio": "9:16",
-            "reference_image": "Upload the brand's real product photo as the starting image.",
-            "tips": ["Generate 2-3 variations and keep the one where the product label is unchanged.",
-                     "Mute or ignore the clip's audio; the app drops it and uses your approved text only.",
-                     "Free tools may add a watermark and limit commercial use: fine for a demo, check before real campaigns."]}
+    vi = getattr(profile, "visual_identity", None)
+    colours = [x for x in (getattr(vi, "primary", ""), getattr(vi, "secondary", "")) if x] if vi else []
+    prods = list(getattr(profile, "products", []) or [])
+    feats = list(getattr(prods[0], "features", []) or []) if prods else []
+    out = ai_prompt.build(c.concept_type, brand.name, product, profile.product_category, c.target_segment,
+                          list(profile.brand_tone or []), colours, feats[0] if feats else "",
+                          hook=c.hook, angle=c.angle, scene=str((c.visual_brief or {}).get("scene", "")))
+    prompt = out["prompt"]
+    return {"concept_id": c.id, "prompt": prompt, "duration_s": out["duration_s"], "aspect_ratio": out["aspect_ratio"],
+            "directed_by": out["directed_by"]}
 
 
 @router.post("/concepts/{concept_id}/ai-clip")
