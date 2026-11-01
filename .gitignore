@@ -1,5 +1,8 @@
 .env
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 backend/storage/
 __pycache__/
 .venv/
